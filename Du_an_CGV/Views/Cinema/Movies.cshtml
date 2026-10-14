@@ -1,0 +1,85 @@
+@{
+    ViewData["Title"] = "Lịch Chiếu Phim - CGV Landmark 81";
+}
+
+@section Styles {
+<style>
+    .cinema-header {
+        background: #242424; color: white; border-radius: 6px; padding: 24px 28px; margin-bottom: 28px;
+        border-left: 5px solid #e30613; box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+    .movie-card {
+        position: relative; border-radius: 4px; overflow: hidden; cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s; background: white; border: 1px solid #e0e0e0;
+    }
+    .movie-card:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
+    .movie-card img { width: 100%; height: 280px; object-fit: cover; display: block; }
+    .movie-info { background: rgba(0, 0, 0, 0.88); padding: 8px 10px; }
+    .movie-title { color: white; font-weight: 700; font-size: 0.82rem; margin: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-transform: uppercase; }
+    .rating-badge { position: absolute; top: 6px; left: 6px; color: white; font-size: 0.6rem; font-weight: 700; padding: 2px 6px; border-radius: 2px; z-index: 2; }
+</style>
+}
+
+<main style="max-width: 960px; margin: 0 auto; padding: 24px 16px 56px; min-height: 65vh;">
+    <a asp-controller="Cinema" asp-action="Index" style="display: inline-block; color: #e30613; font-size: 0.82rem; font-weight: 700; margin-bottom: 18px;">← Chọn rạp khác</a>
+
+    <!-- Cinema Header -->
+    <header class="cinema-header">
+        <p style="color: #bbb; font-size: 0.78rem; margin: 0 0 6px;">Khu vực: Hồ Chí Minh</p>
+        <h1 style="font-family: 'Montserrat', 'Roboto', sans-serif; font-size: 1.6rem; font-weight: 800; letter-spacing: 0.5px; margin: 0;">CGV Vincom Center Landmark 81</h1>
+        <p style="color: #999; font-size: 0.78rem; margin: 6px 0 0;">Tầng B1, TTTM Vincom Center Landmark 81, 720A Điện Biên Phủ, P. 22, Q. Bình Thạnh, TP.HCM</p>
+    </header>
+
+    <!-- Đang chiếu -->
+    <section style="margin-bottom: 38px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #e30613; padding-bottom: 8px; margin-bottom: 18px;">
+            <h2 style="font-family: 'Montserrat', 'Roboto', sans-serif; font-size: 1.35rem; font-weight: 800; margin: 0; color: #1a1a1a;">PHIM ĐANG CHIẾU</h2>
+            <span style="color: #777; font-size: 0.78rem; font-weight: 600;">4 phim</span>
+        </div>
+        
+        <div class="grid-4">
+            <a asp-controller="Booking" asp-action="Index" asp-route-movieId="1" class="movie-card">
+                <div class="rating-badge" style="background: #2e7d32;">T16</div>
+                <img src="https://images.unsplash.com/photo-1568038479111-87bf80659645?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400" alt="Lật Mặt 7: Một Điều Ước">
+                <div class="movie-info"><p class="movie-title">Lật Mặt 7: Một Điều Ước</p></div>
+            </a>
+            <a asp-controller="Booking" asp-action="Index" asp-route-movieId="2" class="movie-card">
+                <div class="rating-badge" style="background: #b71c1c;">T18</div>
+                <img src="https://images.unsplash.com/photo-1778973812223-e5079431fa47?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400" alt="Vùng Bắt Quỷ Dữ">
+                <div class="movie-info"><p class="movie-title">Vùng Bắt Quỷ Dữ</p></div>
+            </a>
+            <a asp-controller="Booking" asp-action="Index" asp-route-movieId="3" class="movie-card">
+                <div class="rating-badge" style="background: #b71c1c;">T18</div>
+                <img src="https://images.unsplash.com/photo-1651627567991-e4ec7b8fc72c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400" alt="Tế Vật Cải Mệnh">
+                <div class="movie-info"><p class="movie-title">Tế Vật Cải Mệnh</p></div>
+            </a>
+            <a asp-controller="Booking" asp-action="Index" asp-route-movieId="4" class="movie-card">
+                <div class="rating-badge" style="background: #e65100;">T13</div>
+                <img src="https://images.unsplash.com/photo-1609062757924-6c2d01b3b422?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400" alt="Kỳ Nghỉ Hè Nhớ Đời">
+                <div class="movie-info"><p class="movie-title">Kỳ Nghỉ Hè Nhớ Đời</p></div>
+            </a>
+        </div>
+    </section>
+
+    <!-- Sắp chiếu -->
+    <section>
+        <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #333; padding-bottom: 8px; margin-bottom: 18px;">
+            <h2 style="font-family: 'Montserrat', 'Roboto', sans-serif; font-size: 1.35rem; font-weight: 800; margin: 0; color: #1a1a1a;">PHIM SẮP CHIẾU</h2>
+            <span style="color: #777; font-size: 0.78rem; font-weight: 600;">2 phim</span>
+        </div>
+        
+        <div class="grid-4">
+            <a asp-controller="Movie" asp-action="Detail" asp-route-id="5" class="movie-card">
+                <div class="rating-badge" style="background: #1565c0;">K</div>
+                <img src="https://images.unsplash.com/photo-1563170446-9c3c0622d8a9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400" alt="Marnie Yêu Dấu">
+                <div class="movie-info"><p class="movie-title">Marnie Yêu Dấu</p></div>
+            </a>
+            <a asp-controller="Movie" asp-action="Detail" asp-route-id="6" class="movie-card">
+                <div class="rating-badge" style="background: #2e7d32;">T16</div>
+                <img src="https://images.unsplash.com/photo-1609062757924-6c2d01b3b422?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400" alt="Bông Hoa Nhà Hát">
+                <div class="movie-info"><p class="movie-title">Bông Hoa Nhà Hát</p></div>
+            </a>
+        </div>
+    </section>
+</main>

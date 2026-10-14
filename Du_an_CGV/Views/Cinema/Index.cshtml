@@ -1,0 +1,94 @@
+@{
+    ViewData["Title"] = "Hệ Thống Rạp CGV Toàn Quốc";
+}
+
+@section Styles {
+<style>
+    .breadcrumb { font-size: 0.78rem; color: #666; display: flex; align-items: center; gap: 6px; margin-bottom: 24px; }
+    .breadcrumb a:hover { color: #e30613; }
+    
+    /* Main Panel */
+    .cinema-panel {
+        background: #242424; border-radius: 8px; padding: 40px 48px; position: relative;
+        border: 2px solid #444; box-shadow: inset 0 0 0 6px #303030, 0 8px 30px rgba(0,0,0,0.45);
+    }
+    
+    .corner { position: absolute; width: 16px; height: 16px; border: 2px solid #888; border-radius: 1px; }
+    .corner-tl { top: 8px; left: 8px; }
+    .corner-tr { top: 8px; right: 8px; }
+    .corner-bl { bottom: 8px; left: 8px; }
+    .corner-br { bottom: 8px; right: 8px; }
+
+    .title {
+        font-family: 'Montserrat', 'Roboto', sans-serif; font-weight: 900; font-size: 2.2rem;
+        letter-spacing: 5px; color: #bbb; text-align: center; margin-bottom: 36px;
+        text-shadow: 0 2px 10px rgba(0,0,0,0.6);
+    }
+
+    /* City Grid */
+    .city-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px 16px; margin-bottom: 28px; }
+    .city-btn {
+        background: transparent; border: none; text-align: left; padding: 10px 0;
+        font-weight: 700; font-size: 0.92rem; color: #aaa; border-bottom: 1px solid rgba(255,255,255,0.08);
+        transition: color 0.15s, border-color 0.15s; cursor: pointer;
+    }
+    .city-btn:hover { color: #fff; border-bottom-color: #fff; }
+    .city-btn.active { color: #e30613; border-bottom-color: #e30613; }
+
+    .divider { height: 1px; background: rgba(255,255,255,0.15); margin: 8px 0 28px; }
+
+    /* Cinemas List */
+    .cinema-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 24px; }
+    .cinema-link {
+        display: block; background: #2f2f2f; border: 1px solid #404040; border-radius: 4px;
+        padding: 12px 14px; font-size: 0.86rem; color: #ddd; font-weight: 600;
+        transition: background 0.15s, color 0.15s, border-color 0.15s; text-decoration: none;
+    }
+    .cinema-link:hover { background: #383838; color: #fff; border-color: #e30613; }
+</style>
+}
+
+<main style="max-width: 960px; margin: 0 auto; padding: 24px 16px 48px;">
+    <nav class="breadcrumb">
+        <a asp-controller="Home" asp-action="Index" style="color: #e30613;">🏠</a>
+        <span>›</span>
+        <span style="color: #e30613; font-weight: 600;">Hệ Thống Rạp CGV</span>
+    </nav>
+
+    <div class="cinema-panel">
+        <div class="corner corner-tl"></div>
+        <div class="corner corner-tr"></div>
+        <div class="corner corner-bl"></div>
+        <div class="corner corner-br"></div>
+
+        <h1 class="title">CGV CINEMAS</h1>
+
+        <div class="city-grid">
+            <button class="city-btn active" type="button">Hồ Chí Minh</button>
+            <button class="city-btn" type="button">Hà Nội</button>
+            <button class="city-btn" type="button">Đà Nẵng</button>
+            <button class="city-btn" type="button">Cần Thơ</button>
+            <button class="city-btn" type="button">Đồng Nai</button>
+            
+            <button class="city-btn" type="button">Hải Phòng</button>
+            <button class="city-btn" type="button">Bình Dương</button>
+            <button class="city-btn" type="button">Khánh Hòa</button>
+            <button class="city-btn" type="button">Bà Rịa-Vũng Tàu</button>
+            <button class="city-btn" type="button">Quảng Ninh</button>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="cinema-list">
+            <a asp-controller="Cinema" asp-action="Movies" asp-route-id="1" class="cinema-link">📍 CGV Landmark 81</a>
+            <a asp-controller="Cinema" asp-action="Movies" asp-route-id="2" class="cinema-link">📍 CGV Sư Vạn Hạnh</a>
+            <a asp-controller="Cinema" asp-action="Movies" asp-route-id="3" class="cinema-link">📍 CGV Vincom Đồng Khởi</a>
+            <a asp-controller="Cinema" asp-action="Movies" asp-route-id="4" class="cinema-link">📍 CGV Crescent Mall</a>
+            <a asp-controller="Cinema" asp-action="Movies" asp-route-id="5" class="cinema-link">📍 CGV Vivo City</a>
+            <a asp-controller="Cinema" asp-action="Movies" asp-route-id="6" class="cinema-link">📍 CGV Hoàng Văn Thụ</a>
+            <a asp-controller="Cinema" asp-action="Movies" asp-route-id="7" class="cinema-link">📍 CGV Pearl Plaza</a>
+            <a asp-controller="Cinema" asp-action="Movies" asp-route-id="8" class="cinema-link">📍 CGV Hùng Vương Plaza</a>
+            <a asp-controller="Cinema" asp-action="Movies" asp-route-id="9" class="cinema-link">📍 CGV Aeon Tân Phú</a>
+        </div>
+    </div>
+</main>

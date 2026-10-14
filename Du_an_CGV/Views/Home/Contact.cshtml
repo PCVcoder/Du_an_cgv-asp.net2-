@@ -1,0 +1,171 @@
+@{
+    ViewData["Title"] = "Liên Hệ CGV Việt Nam";
+}
+
+@section Styles {
+<style>
+    .breadcrumb { padding: 12px 0 20px; font-size: 0.78rem; color: #666; display: flex; gap: 6px; align-items: center; }
+    
+    /* Layout */
+    .contact-container { display: grid; grid-template-columns: 220px 1fr; gap: 32px; align-items: flex-start; margin-bottom: 50px; }
+    
+    /* Sidebar */
+    .sidebar-btn {
+        display: block; width: 100%; text-align: left; padding: 12px 16px;
+        font-size: 0.8rem; font-weight: 700; letter-spacing: 0.3px; cursor: pointer; margin-bottom: 4px;
+        border-radius: 3px; background: #d0cbc4; color: #444; border: none; transition: 0.15s; text-decoration: none;
+    }
+    .sidebar-btn:hover { background: #bbb; }
+    .sidebar-btn.active { background: #e30613; color: white; }
+
+    /* Main Content */
+    h2.page-title { color: #e30613; font-size: 1.6rem; font-weight: 800; margin-bottom: 24px; margin-top: 0; font-family: 'Montserrat', 'Roboto', sans-serif; }
+    
+    .map-container { position: relative; width: 100%; height: 320px; border-radius: 6px; overflow: hidden; border: 1px solid #ccc; margin-bottom: 28px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: flex-start; }
+    
+    .section-title {
+        font-family: 'Montserrat', 'Roboto', sans-serif; font-weight: 800; font-size: 0.95rem; letter-spacing: 0.5px;
+        color: #333; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 2px solid #e30613; text-transform: uppercase;
+    }
+    
+    .info-block { font-size: 0.85rem; color: #444; line-height: 1.7; margin-bottom: 20px; }
+    .info-block p { margin: 0 0 5px 0; }
+    .info-block a { color: #e30613; text-decoration: none; font-weight: 600; }
+    .info-block a:hover { text-decoration: underline; }
+
+    .social-links { display: flex; gap: 10px; margin-top: 8px; }
+    .social-link {
+        width: 36px; height: 36px; border-radius: 50%; color: white;
+        display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: 700; text-decoration: none;
+        transition: transform 0.2s;
+    }
+    .social-link:hover { transform: translateY(-2px); }
+    
+    /* Form */
+    .form-box { background: white; border-radius: 8px; padding: 24px; border: 1px solid #e0dbd4; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+    .form-title { font-family: 'Montserrat', 'Roboto', sans-serif; font-size: 1.05rem; letter-spacing: 0.5px; color: #111; margin-bottom: 16px; margin-top: 0; font-weight: 800; }
+    
+    .input-group { margin-bottom: 14px; }
+    .input-group label { display: block; font-size: 0.82rem; font-weight: 600; color: #333; margin-bottom: 5px; }
+    .input-group input, .input-group textarea {
+        width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 4px;
+        font-size: 0.88rem; color: #333; outline: none; font-family: 'Roboto', sans-serif;
+    }
+    .input-group input:focus, .input-group textarea:focus { border-color: #e30613; }
+    .input-group textarea { resize: vertical; }
+    .submit-btn {
+        background: #e30613; color: white; border: none; padding: 11px 32px;
+        font-weight: 700; font-size: 0.88rem; cursor: pointer; border-radius: 3px; letter-spacing: 0.5px;
+        transition: background 0.15s;
+    }
+    .submit-btn:hover { background: #c00010; }
+</style>
+}
+
+<div style="max-width: 980px; margin: 0 auto; padding: 0 16px;">
+    <nav class="breadcrumb">
+        <a asp-controller="Home" asp-action="Index" style="color: #e30613; text-decoration: none; font-size: 0.78rem;">🏠 Trang chủ</a>
+        <span>›</span>
+        <span style="color: #e30613; font-weight: 600;">Liên Hệ CGV</span>
+    </nav>
+
+    <div class="contact-container">
+        <!-- LEFT SIDEBAR -->
+        <aside>
+            <a href="#" class="sidebar-btn">GIỚI THIỆU</a>
+            <a asp-controller="Home" asp-action="Contact" class="sidebar-btn active">LIÊN HỆ CGV</a>
+            <a href="#" class="sidebar-btn">ĐIỀU KHOẢN CHUNG</a>
+            <a href="#" class="sidebar-btn">ĐIỀU KHOẢN GIAO DỊCH</a>
+            <a href="#" class="sidebar-btn">CHÍNH SÁCH THANH TOÁN</a>
+            <a href="#" class="sidebar-btn">CHÍNH SÁCH BẢO MẬT</a>
+            <a href="#" class="sidebar-btn">CÂU HỎI THƯỜNG GẶP</a>
+            <a asp-controller="Home" asp-action="Rental" class="sidebar-btn">DÀNH CHO ĐỐI TÁC</a>
+            <a href="#" class="sidebar-btn">QUY ĐỊNH TẠI RẠP PHIM</a>
+        </aside>
+
+        <!-- RIGHT CONTENT -->
+        <main>
+            <h2 class="page-title">Liên Hệ Với CGV Việt Nam</h2>
+
+            <!-- Map -->
+            <div class="map-container">
+                <iframe title="CGV Office Map" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3919.6346778709!2d106.65539831533424!3d10.748697992343!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31752f1b7c3a7f85%3A0x7db23e1f8e88e5a8!2zVsSDbiBwaOOG4u-8jG5nIENKIENHViBWaeG7h3QgTmFt!5e0!3m2!1svi!2s!4v1620000000000!5m2!1svi!2s" style="width: 100%; height: 100%; border: none;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+            </div>
+
+            <div class="info-grid">
+                <!-- Contact Info -->
+                <div>
+                    <div class="info-block">
+                        <h3 class="section-title">Trụ sở chính</h3>
+                        <p>Tầng 2, Rivera Park Saigon – Số 7/28 Thành Thái, phường Diên Hồng, Thành phố Hồ Chí Minh, Việt Nam.</p>
+                    </div>
+
+                    <div class="info-block">
+                        <h3 class="section-title">Dịch vụ khách hàng</h3>
+                        <p><strong>Hotline:</strong> <span style="color: #e30613; font-weight: 700; font-size: 1.05rem;">1900 6017</span></p>
+                        <p><strong>Giờ làm việc:</strong> 8:00 – 22:00 (Tất cả các ngày bao gồm Lễ Tết)</p>
+                        <p><strong>Email hỗ trợ:</strong> <a href="mailto:hoidap@cgv.vn">hoidap@cgv.vn</a></p>
+                    </div>
+
+                    <div class="info-block">
+                        <h3 class="section-title">Liên hệ quảng cáo</h3>
+                        <p><strong>Phòng kinh doanh:</strong> +84-28-3636 57 57</p>
+                        <p>Ext: 278 (Ms. Huỳnh)</p>
+                        <p><strong>Hotline:</strong> 0335 400 414</p>
+                        <p><strong>Email:</strong> <a href="mailto:ad.cgv@cj.net">ad.cgv@cj.net</a></p>
+                    </div>
+
+                    <div class="info-block">
+                        <h3 class="section-title">Mua vé nhóm & Sự kiện</h3>
+                        <p>– <strong>Miền Bắc:</strong> <a href="mailto:sale.cinema@cgv.vn">sale.cinema@cgv.vn</a></p>
+                        <p>– <strong>Miền Nam:</strong> <a href="mailto:caominh.le@cj.net">caominh.le@cj.net</a></p>
+                    </div>
+
+                    <div class="info-block">
+                        <h3 class="section-title">Kết nối mạng xã hội</h3>
+                        <div class="social-links">
+                            <a href="https://facebook.com" target="_blank" class="social-link" style="background: #1877f2;">f</a>
+                            <a href="https://youtube.com" target="_blank" class="social-link" style="background: #ff0000;">▶</a>
+                            <a href="https://instagram.com" target="_blank" class="social-link" style="background: #e1306c;">📷</a>
+                            <a href="https://zalo.me" target="_blank" class="social-link" style="background: #008fe8;">z</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contact Form -->
+                <div class="form-box">
+                    <h3 class="form-title">GỬI TIN NHẮN CHO CGV</h3>
+                    <form onsubmit="event.preventDefault(); alert('Cảm ơn ý kiến của bạn! CGV sẽ phản hồi sớm nhất.');" style="display: flex; flex-direction: column; gap: 8px;">
+                        <p style="text-align: right; font-size: 0.72rem; color: #e30613; margin: 0;">* Bắt buộc nhập thông tin</p>
+                        
+                        <div class="input-group">
+                            <label>Họ và tên <span style="color: #e30613;">*</span></label>
+                            <input type="text" placeholder="Nguyễn Văn A" required>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>Email liên hệ <span style="color: #e30613;">*</span></label>
+                            <input type="email" placeholder="example@email.com" required>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>Số điện thoại</label>
+                            <input type="tel" placeholder="0901 234 567">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>Nội dung câu hỏi / phản ánh <span style="color: #e30613;">*</span></label>
+                            <textarea rows="5" placeholder="Nhập chi tiết nội dung cần hỗ trợ..." required></textarea>
+                        </div>
+                        
+                        <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
+                            <button type="submit" class="submit-btn">GỬI LIÊN HỆ</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>

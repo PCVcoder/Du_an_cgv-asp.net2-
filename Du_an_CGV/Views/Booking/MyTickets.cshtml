@@ -1,0 +1,101 @@
+@{
+    ViewData["Title"] = "Vé Của Tôi";
+}
+
+@section Styles {
+<style>
+    .container { max-width: 960px; margin: 0 auto; padding: 28px 16px 56px; min-height: 65vh; }
+    
+    .page-header { display: flex; align-items: flex-end; justify-content: space-between; border-bottom: 2px solid #e30613; padding-bottom: 12px; margin-bottom: 24px; }
+    .account-label { margin: 0 0 4px; color: #777; font-size: 0.78rem; font-weight: 600; }
+    .page-title { margin: 0; font-family: 'Montserrat', 'Roboto', sans-serif; font-size: 1.7rem; font-weight: 800; letter-spacing: 0.5px; color: #1a1a1a; }
+    
+    .btn-new-ticket {
+        display: inline-block; border: none; border-radius: 3px; background: #e30613; color: white;
+        padding: 10px 20px; font-weight: 700; font-size: 0.85rem; text-decoration: none; transition: background 0.15s;
+    }
+    .btn-new-ticket:hover { background: #c00010; }
+    
+    .ticket-list { display: grid; gap: 18px; }
+    
+    .ticket-card { background: white; border-radius: 6px; overflow: hidden; display: grid; grid-template-columns: 120px 1fr 180px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); border: 1px solid #e8e8e8; }
+    .ticket-poster { width: 120px; height: 100%; min-height: 190px; object-fit: cover; }
+    
+    .ticket-info { padding: 20px 22px; display: flex; flex-direction: column; justify-content: center; }
+    .ticket-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .ticket-id { color: #e30613; font-size: 0.75rem; font-weight: 800; margin: 0; }
+    
+    .badge { border-radius: 12px; padding: 3px 9px; font-size: 0.62rem; font-weight: 700; }
+    .badge-paid { background: #e8f5e9; color: #2e7d32; }
+    .badge-unpaid { background: #fff3e0; color: #e65100; }
+    
+    .movie-title { font-size: 1.15rem; margin: 0 0 10px; color: #1a1a1a; font-weight: 800; font-family: 'Montserrat', 'Roboto', sans-serif; }
+    .detail-line { color: #555; font-size: 0.82rem; margin: 0 0 4px; }
+    .detail-line-mb { margin: 0 0 8px; font-weight: 600; color: #333; }
+    
+    .price { color: #e30613; font-size: 1rem; font-weight: 800; margin: 4px 0 0; }
+    
+    .action-col { border-left: 1px dashed #ccc; display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: 10px; padding: 18px; position: relative; background: #fafafa; }
+    
+    .qr-code { width: 64px; height: 64px; background: repeating-linear-gradient(45deg,#111 0 4px,#fff 4px 8px); border: 4px solid white; box-shadow: 0 0 0 1px #ddd; margin: 0 auto; }
+    
+    .btn-action { border: none; border-radius: 3px; background: #e30613; color: white; padding: 9px; font-size: 0.75rem; font-weight: 700; cursor: pointer; text-align: center; }
+    .btn-action:hover { background: #c00010; }
+    .btn-refund { border: 1px solid #e30613; background: white; color: #e30613; }
+    .btn-refund:hover { background: #fff0f0; }
+    .btn-link { border: none; background: transparent; color: #777; padding: 4px 8px; font-size: 0.72rem; text-decoration: underline; cursor: pointer; text-align: center; }
+</style>
+}
+
+<main class="container">
+    <div class="page-header">
+        <div>
+            <p class="account-label">TÀI KHOẢN THÀNH VIÊN</p>
+            <h1 class="page-title">VÉ CỦA TÔI</h1>
+        </div>
+        <a asp-controller="Movie" asp-action="Index" class="btn-new-ticket">+ ĐẶT VÉ MỚI</a>
+    </div>
+
+    <div class="ticket-list">
+        <!-- Ticket 1: Paid -->
+        <article class="ticket-card">
+            <img src="https://images.unsplash.com/photo-1778973812223-e5079431fa47?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400" alt="Vùng Bắt Quỷ Dữ" class="ticket-poster">
+            <div class="ticket-info">
+                <div class="ticket-header">
+                    <p class="ticket-id">MÃ VÉ: TKT-9824</p>
+                    <span class="badge badge-paid">ĐÃ THANH TOÁN</span>
+                </div>
+                <h2 class="movie-title">Vùng Bắt Quỷ Dữ</h2>
+                <p class="detail-line">📍 CGV Vincom Center Landmark 81 - Phòng chiếu IMAX</p>
+                <p class="detail-line detail-line-mb">🕒 19:30, Hôm nay · Ghế: <strong>G8, G9</strong></p>
+                <p class="detail-line" style="color: #666; font-size: 0.75rem;">Combo: Sweet Couple Combo (1 Bắp + 2 Nước)</p>
+                <p class="price">419.000 VNĐ</p>
+            </div>
+            <div class="action-col">
+                <div class="qr-code" title="Mã QR vào phòng chiếu"></div>
+                <button type="button" class="btn-action btn-refund" onclick="alert('Yêu cầu hoàn tiền đã gửi! CGV sẽ xử lý trong vòng 24h.')">HOÀN TIỀN</button>
+                <p style="color: #888; font-size: 0.62rem; margin: 0; text-align: center;">Quét mã QR tại cổng soat vé</p>
+            </div>
+        </article>
+
+        <!-- Ticket 2: Unpaid -->
+        <article class="ticket-card">
+            <img src="https://images.unsplash.com/photo-1568038479111-87bf80659645?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400" alt="Lật Mặt 7: Một Điều Ước" class="ticket-poster">
+            <div class="ticket-info">
+                <div class="ticket-header">
+                    <p class="ticket-id">MÃ VÉ: TKT-1102</p>
+                    <span class="badge badge-unpaid">CHƯA THANH TOÁN</span>
+                </div>
+                <h2 class="movie-title">Lật Mặt 7: Một Điều Ước</h2>
+                <p class="detail-line">📍 CGV Sư Vạn Hạnh - Cinema 02</p>
+                <p class="detail-line detail-line-mb">🕒 20:15, Ngày mai · Ghế: <strong>E4, E5</strong></p>
+                <p class="price">220.000 VNĐ</p>
+            </div>
+            <div class="action-col">
+                <div class="qr-code"></div>
+                <button type="button" class="btn-action" onclick="alert('Đang chuyển đến cổng thanh toán...')">THANH TOÁN NGAY</button>
+                <button type="button" class="btn-link" onclick="if(confirm('Bạn có chắc muốn hủy vé này?')) this.closest('.ticket-card').remove();">Hủy vé</button>
+            </div>
+        </article>
+    </div>
+</main>

@@ -1,0 +1,55 @@
+@{
+    ViewData["Title"] = "Tài Khoản Của Tôi";
+}
+
+@section Styles {
+<style>
+    .btn-primary { border: none; border-radius: 3px; background: #e30613; color: white; padding: 11px 24px; font-weight: 700; text-decoration: none; display: inline-block; transition: background 0.15s; }
+    .btn-primary:hover { background: #c00010; }
+    .btn-outline { border: 1px solid #ccc; border-radius: 3px; background: white; color: #555; padding: 9px 16px; font-weight: 600; cursor: pointer; transition: 0.15s; }
+    .btn-outline:hover { border-color: #999; color: #111; }
+    .btn-dark { border: 1px solid #666; border-radius: 3px; background: transparent; color: white; padding: 10px 18px; font-weight: 700; text-decoration: none; display: inline-block; transition: background 0.15s; }
+    .btn-dark:hover { background: #333; }
+</style>
+}
+
+<main style="max-width: 960px; min-height: 65vh; margin: 0 auto; padding: 28px 16px 56px;">
+    <div style="border-bottom: 2px solid #e30613; padding-bottom: 12px; margin-bottom: 28px;">
+        <p style="color: #777; font-size: 0.78rem; font-weight: 600; margin: 0 0 4px;">THÀNH VIÊN CGV CINEMAS</p>
+        <h1 style="font-family: 'Montserrat', 'Roboto', sans-serif; font-size: 1.7rem; font-weight: 800; letter-spacing: 0.5px; margin: 0; color: #1a1a1a;">TÀI KHOẢN CỦA TÔI</h1>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+        <!-- Cột thông tin cá nhân -->
+        <section style="background: white; border-radius: 6px; padding: 28px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); border: 1px solid #e8e8e8;">
+            <!-- Avatar -->
+            <div style="width: 58px; height: 58px; border-radius: 50%; background: #e30613; color: white; display: flex; align-items: center; justify-content: center; font-family: 'Montserrat', sans-serif; font-size: 1.3rem; font-weight: 800; margin-bottom: 18px; box-shadow: 0 2px 8px rgba(227,6,19,0.3);">
+                CGV
+            </div>
+            <p style="color: #888; font-size: 0.72rem; font-weight: 600; margin: 0 0 4px;">HỌ VÀ TÊN</p>
+            <h2 style="font-family: 'Montserrat', 'Roboto', sans-serif; font-size: 1.2rem; font-weight: 800; margin: 0 0 16px; color: #222;">Khách Hàng Thành Viên CGV</h2>
+            
+            <p style="color: #888; font-size: 0.72rem; font-weight: 600; margin: 0 0 4px;">EMAIL / SỐ ĐIỆN THOẠI</p>
+            <p style="color: #333; font-size: 0.9rem; font-weight: 600; margin: 0 0 16px;">khachhang@cgv.vn · 0901 234 567</p>
+            
+            <p style="color: #888; font-size: 0.72rem; font-weight: 600; margin: 0 0 4px;">CẤP ĐỘ THÀNH VIÊN</p>
+            <p style="margin: 0 0 24px;"><span style="background: #e8f5e9; color: #2e7d32; font-weight: 800; font-size: 0.75rem; padding: 4px 10px; border-radius: 4px;">Standard Member</span></p>
+            
+            <button class="btn-outline" type="button" onclick="window.location.href='@Url.Action("Register", "Account")'">ĐĂNG XUẤT</button>
+        </section>
+
+        <!-- Cột số dư & Thẻ quà tặng -->
+        <section style="background: #222; color: white; border-radius: 6px; padding: 28px; box-shadow: 0 4px 16px rgba(0,0,0,0.15); display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+                <p style="color: #aaa; font-size: 0.75rem; font-weight: 700; letter-spacing: 1px; margin: 0 0 8px;">SỐ DƯ TÀI KHOẢN CGV POINT</p>
+                <p style="color: white; font-family: 'Montserrat', 'Roboto', sans-serif; font-size: 2.2rem; font-weight: 800; margin: 0 0 8px;">0 <span style="font-size: 1.2rem; font-weight: 600; color: #ff9800;">Điểm</span></p>
+                <p style="color: #aaa; font-size: 0.8rem; line-height: 1.6; margin: 0 0 24px;">Điểm tích lũy và tiền hoàn vé sẽ được cộng trực tiếp vào số dư để đổi vé xem phim hoặc bắp nước miễn phí.</p>
+            </div>
+            
+            <div style="display: flex; gap: 12px;">
+                <a asp-controller="Booking" asp-action="MyTickets" class="btn-primary">VÉ CỦA TÔI (0)</a>
+                <a asp-controller="Movie" asp-action="Index" class="btn-dark">MUA VÉ NGAY</a>
+            </div>
+        </section>
+    </div>
+</main>

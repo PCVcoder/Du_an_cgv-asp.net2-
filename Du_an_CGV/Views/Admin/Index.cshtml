@@ -1,0 +1,518 @@
+@{
+    ViewData["Title"] = "CGV - Hệ Thống Quản Trị Hệ Thống";
+}
+
+@section Styles {
+<style>
+    .admin-wrapper {
+        display: flex;
+        min-height: 680px;
+        background: #f5f0e8;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        margin: 20px auto 50px;
+        max-width: 1100px;
+        border: 1px solid #dfd8cf;
+    }
+    
+    /* Sidebar */
+    .admin-aside {
+        width: 230px;
+        background: #1a1a1a;
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+    }
+    .admin-sidebar-header {
+        padding: 22px 20px 18px;
+        border-bottom: 1px solid #333;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .admin-sidebar-header .logo {
+        font-family: 'Oswald', sans-serif;
+        font-weight: 700;
+        color: #e30613;
+        font-size: 1.5rem;
+    }
+    .admin-sidebar-header .role {
+        color: #888;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 1px;
+    }
+    
+    .admin-nav-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        padding: 13px 20px;
+        background: transparent;
+        color: #ccc;
+        font-weight: 500;
+        font-size: 0.88rem;
+        border: none;
+        text-align: left;
+        cursor: pointer;
+        transition: background 0.15s, color 0.15s;
+    }
+    .admin-nav-item:hover { background: rgba(255,255,255,0.08); color: white; }
+    .admin-nav-item.active { background: #e30613; color: white; font-weight: 700; }
+    
+    /* Main Content */
+    .admin-main {
+        flex: 1;
+        background: #f5f0e8;
+        overflow-x: auto;
+        padding: 28px 32px 40px;
+    }
+    .admin-title {
+        font-family: 'Montserrat', 'Roboto', sans-serif;
+        font-size: 1.4rem;
+        font-weight: 800;
+        margin: 0 0 24px;
+        color: #111;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    /* Stats Grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 32px;
+    }
+    .stat-card {
+        background: white;
+        border-radius: 6px;
+        padding: 18px 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border-left: 4px solid #000;
+    }
+    .stat-icon { font-size: 1.6rem; margin-bottom: 6px; }
+    .stat-value {
+        font-size: 1.8rem;
+        font-weight: 800;
+        font-family: 'Montserrat', 'Roboto', sans-serif;
+    }
+    .stat-label { font-size: 0.8rem; color: #666; margin-top: 4px; font-weight: 500; }
+    
+    /* Lists */
+    .list-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+    }
+    .list-card {
+        background: white;
+        border-radius: 6px;
+        padding: 20px 22px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .list-card h3 {
+        font-family: 'Montserrat', 'Roboto', sans-serif;
+        font-size: 1rem;
+        font-weight: 800;
+        margin: 0 0 16px;
+        color: #111;
+        border-bottom: 1px solid #f0eae1;
+        padding-bottom: 8px;
+    }
+    .list-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 0;
+        border-bottom: 1px solid #f5f0e8;
+    }
+    .list-item img {
+        width: 40px;
+        height: 56px;
+        object-fit: cover;
+        border-radius: 3px;
+        flex-shrink: 0;
+    }
+    .list-item-content { flex: 1; min-width: 0; }
+    .list-item-title {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #111;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .list-item-sub { font-size: 0.75rem; color: #777; margin-top: 2px; }
+    .badge {
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 3px 7px;
+        color: white;
+        border-radius: 3px;
+        flex-shrink: 0;
+    }
+    
+    /* Tables */
+    .admin-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 6px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        font-size: 0.85rem;
+    }
+    .admin-table th {
+        background: #ede6dc;
+        padding: 12px 14px;
+        text-align: left;
+        font-weight: 700;
+        color: #333;
+    }
+    .admin-table td {
+        padding: 12px 14px;
+        border-bottom: 1px solid #f2eee8;
+        vertical-align: middle;
+    }
+    .admin-table tr:hover { background: #faf8f5; }
+    .btn-action {
+        padding: 4px 10px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border-radius: 3px;
+        border: none;
+        cursor: pointer;
+    }
+    .btn-edit { background: #1565c0; color: white; }
+    .btn-del { background: #d32f2f; color: white; }
+    .btn-add { background: #2e7d32; color: white; padding: 8px 16px; font-weight: 700; border-radius: 4px; border: none; font-size: 0.82rem; cursor: pointer; }
+</style>
+}
+
+<div class="admin-wrapper">
+    <!-- Sidebar -->
+    <aside class="admin-aside">
+        <div class="admin-sidebar-header">
+            <span class="logo">CGV</span>
+            <span class="role">QUẢN TRỊ</span>
+        </div>
+        <nav style="flex: 1; padding-top: 10px;">
+            <button class="admin-nav-item active" onclick="switchAdminTab('dashboard', this)">
+                <span>📊</span> Tổng quan
+            </button>
+            <button class="admin-nav-item" onclick="switchAdminTab('movies', this)">
+                <span>🎬</span> Quản lý Phim
+            </button>
+            <button class="admin-nav-item" onclick="switchAdminTab('promos', this)">
+                <span>🎁</span> Ưu Đãi & Tin
+            </button>
+            <button class="admin-nav-item" onclick="switchAdminTab('inquiries', this)">
+                <span>📩</span> Tiếp Nhận TT
+            </button>
+        </nav>
+        <div style="padding: 16px 20px; border-top: 1px solid #333;">
+            <a asp-controller="Home" asp-action="Index" style="display: flex; align-items: center; gap: 8px; color: #aaa; font-size: 0.82rem; text-decoration: none;">
+                ← Về trang chủ
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="admin-main">
+        <!-- TAB 1: DASHBOARD -->
+        <div id="tab-dashboard">
+            <div class="admin-title">
+                <span>Bảng Điều Khiển Tổng Quan</span>
+                <span style="font-size: 0.82rem; font-weight: 500; color: #666;">Hôm nay: @DateTime.Now.ToString("dd/MM/yyyy")</span>
+            </div>
+            
+            <!-- Stats -->
+            <div class="stats-grid">
+                <div class="stat-card" style="border-left-color: #e30613;">
+                    <div class="stat-icon">🎬</div>
+                    <div class="stat-value" style="color: #e30613;">20</div>
+                    <div class="stat-label">Phim đang chiếu</div>
+                </div>
+                <div class="stat-card" style="border-left-color: #1565c0;">
+                    <div class="stat-icon">🎞️</div>
+                    <div class="stat-value" style="color: #1565c0;">20</div>
+                    <div class="stat-label">Phim sắp chiếu</div>
+                </div>
+                <div class="stat-card" style="border-left-color: #2e7d32;">
+                    <div class="stat-icon">🎁</div>
+                    <div class="stat-value" style="color: #2e7d32;">11</div>
+                    <div class="stat-label">Ưu đãi đang chạy</div>
+                </div>
+                <div class="stat-card" style="border-left-color: #e65100;">
+                    <div class="stat-icon">📩</div>
+                    <div class="stat-value" style="color: #e65100;">5</div>
+                    <div class="stat-label">Tin nhắn liên hệ mới</div>
+                </div>
+            </div>
+
+            <div class="list-container">
+                <!-- Recent movies -->
+                <div class="list-card">
+                    <h3>PHIM MỚI CẬP NHẬT</h3>
+                    
+                    <div class="list-item">
+                        <img src="https://images.unsplash.com/photo-1568038479111-87bf80659645?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400" alt="Movie">
+                        <div class="list-item-content">
+                            <div class="list-item-title">Lật Mặt 7: Một Điều Ước</div>
+                            <div class="list-item-sub">Gia đình, Tâm lý · 121 phút</div>
+                        </div>
+                        <span class="badge" style="background: #2e7d32;">T16</span>
+                    </div>
+
+                    <div class="list-item">
+                        <img src="https://images.unsplash.com/photo-1778973812223-e5079431fa47?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400" alt="Movie">
+                        <div class="list-item-content">
+                            <div class="list-item-title">Vùng Bắt Quỷ Dữ</div>
+                            <div class="list-item-sub">Hành động, Kinh dị · 94 phút</div>
+                        </div>
+                        <span class="badge" style="background: #b71c1c;">T18</span>
+                    </div>
+                    
+                    <div class="list-item">
+                        <img src="https://images.unsplash.com/photo-1651627567991-e4ec7b8fc72c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400" alt="Movie">
+                        <div class="list-item-content">
+                            <div class="list-item-title">Tế Vật Cải Mệnh</div>
+                            <div class="list-item-sub">Kinh dị bí ẩn · 103 phút</div>
+                        </div>
+                        <span class="badge" style="background: #b71c1c;">T18</span>
+                    </div>
+
+                    <div class="list-item">
+                        <img src="https://images.unsplash.com/photo-1609062757924-6c2d01b3b422?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400" alt="Movie">
+                        <div class="list-item-content">
+                            <div class="list-item-title">Kỳ Nghỉ Hè Nhớ Đời</div>
+                            <div class="list-item-sub">Gia đình, Hài hước · 113 phút</div>
+                        </div>
+                        <span class="badge" style="background: #e65100;">T13</span>
+                    </div>
+
+                    <div class="list-item" style="border-bottom: none;">
+                        <img src="https://images.unsplash.com/photo-1634733049839-0292be607569?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400" alt="Movie">
+                        <div class="list-item-content">
+                            <div class="list-item-title">Hope: Vùng Tử Địa</div>
+                            <div class="list-item-sub">Khoa học viễn tưởng · 137 phút</div>
+                        </div>
+                        <span class="badge" style="background: #2e7d32;">T16</span>
+                    </div>
+                </div>
+
+                <!-- Recent inquiries -->
+                <div class="list-card">
+                    <h3>LIÊN HỆ & PHẢN HỒI GẦN ĐÂY</h3>
+                    
+                    <div class="list-item" style="display: block;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span class="list-item-title">Nguyễn Văn An</span>
+                            <span class="badge" style="background: #e30613; border-radius: 10px; font-size: 0.65rem;">Mới</span>
+                        </div>
+                        <div class="list-item-sub">Hỏi về đặt vé nhóm 50 người tại CGV Landmark 81</div>
+                    </div>
+
+                    <div class="list-item" style="display: block;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span class="list-item-title">Trần Thị Bích</span>
+                            <span class="badge" style="background: #1565c0; border-radius: 10px; font-size: 0.65rem;">Đã đọc</span>
+                        </div>
+                        <div class="list-item-sub">Thắc mắc về điểm tích lũy thẻ thành viên CGV VIP</div>
+                    </div>
+
+                    <div class="list-item" style="display: block;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span class="list-item-title">Lê Minh Khoa</span>
+                            <span class="badge" style="background: #2e7d32; border-radius: 10px; font-size: 0.65rem;">Đã phản hồi</span>
+                        </div>
+                        <div class="list-item-sub">Thuê trọn phòng chiếu L'Amour tổ chức sự kiện cầu hôn</div>
+                    </div>
+
+                    <div class="list-item" style="display: block;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span class="list-item-title">Phạm Thị Lan</span>
+                            <span class="badge" style="background: #e30613; border-radius: 10px; font-size: 0.65rem;">Mới</span>
+                        </div>
+                        <div class="list-item-sub">Góp ý về chất lượng âm thanh rạp chiếu số 3</div>
+                    </div>
+
+                    <div class="list-item" style="display: block; border-bottom: none;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span class="list-item-title">Hoàng Đức Minh</span>
+                            <span class="badge" style="background: #1565c0; border-radius: 10px; font-size: 0.65rem;">Đã đọc</span>
+                        </div>
+                        <div class="list-item-sub">Đăng ký nhận mã voucher sinh nhật tháng này</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: MOVIES MANAGEMENT -->
+        <div id="tab-movies" style="display: none;">
+            <div class="admin-title">
+                <span>Quản Lý Danh Sách Phim</span>
+                <button class="btn-add" onclick="alert('Mở form thêm phim mới')">＋ Thêm Phim Mới</button>
+            </div>
+            
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th style="width: 60px;">Poster</th>
+                        <th>Tên Phim</th>
+                        <th>Thể Loại</th>
+                        <th>Thời Lượng</th>
+                        <th>Phân Loại</th>
+                        <th>Trạng Thái</th>
+                        <th style="text-align: right;">Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><img src="https://images.unsplash.com/photo-1568038479111-87bf80659645?w=100" style="width: 40px; height: 50px; object-fit: cover; border-radius: 3px;" alt="Poster"></td>
+                        <td><strong>Lật Mặt 7: Một Điều Ước</strong></td>
+                        <td>Gia đình, Tâm lý</td>
+                        <td>121 phút</td>
+                        <td><span class="badge" style="background: #2e7d32;">T16</span></td>
+                        <td><span style="color: #2e7d32; font-weight: 700;">Đang chiếu</span></td>
+                        <td style="text-align: right;">
+                            <button class="btn-action btn-edit">Sửa</button>
+                            <button class="btn-action btn-del">Xóa</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><img src="https://images.unsplash.com/photo-1778973812223-e5079431fa47?w=100" style="width: 40px; height: 50px; object-fit: cover; border-radius: 3px;" alt="Poster"></td>
+                        <td><strong>Vùng Bắt Quỷ Dữ</strong></td>
+                        <td>Hành động, Kinh dị</td>
+                        <td>94 phút</td>
+                        <td><span class="badge" style="background: #b71c1c;">T18</span></td>
+                        <td><span style="color: #2e7d32; font-weight: 700;">Đang chiếu</span></td>
+                        <td style="text-align: right;">
+                            <button class="btn-action btn-edit">Sửa</button>
+                            <button class="btn-action btn-del">Xóa</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><img src="https://images.unsplash.com/photo-1651627567991-e4ec7b8fc72c?w=100" style="width: 40px; height: 50px; object-fit: cover; border-radius: 3px;" alt="Poster"></td>
+                        <td><strong>Tế Vật Cải Mệnh</strong></td>
+                        <td>Kinh dị, Hồi hộp</td>
+                        <td>103 phút</td>
+                        <td><span class="badge" style="background: #b71c1c;">T18</span></td>
+                        <td><span style="color: #2e7d32; font-weight: 700;">Đang chiếu</span></td>
+                        <td style="text-align: right;">
+                            <button class="btn-action btn-edit">Sửa</button>
+                            <button class="btn-action btn-del">Xóa</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><img src="https://images.unsplash.com/photo-1609062757924-6c2d01b3b422?w=100" style="width: 40px; height: 50px; object-fit: cover; border-radius: 3px;" alt="Poster"></td>
+                        <td><strong>Kỳ Nghỉ Hè Nhớ Đời</strong></td>
+                        <td>Gia đình, Hài hước</td>
+                        <td>113 phút</td>
+                        <td><span class="badge" style="background: #e65100;">T13</span></td>
+                        <td><span style="color: #1565c0; font-weight: 700;">Sắp chiếu</span></td>
+                        <td style="text-align: right;">
+                            <button class="btn-action btn-edit">Sửa</button>
+                            <button class="btn-action btn-del">Xóa</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- TAB 3: PROMOS -->
+        <div id="tab-promos" style="display: none;">
+            <div class="admin-title">
+                <span>Quản Lý Ưu Đãi & Tin Tức</span>
+                <button class="btn-add" onclick="alert('Mở form tạo ưu đãi mới')">＋ Tạo Ưu Đãi Mới</button>
+            </div>
+            <div class="list-card">
+                <div class="list-item">
+                    <div class="list-item-content">
+                        <div class="list-item-title">🎉 THỨ TƯ VUI VẺ - VÉ ĐỒNG GIÁ TỪ 65K TẠI CGV TOÀN QUỐC</div>
+                        <div class="list-item-sub">Thời gian áp dụng: Thứ Tư hàng tuần đến hết 31/12/2026</div>
+                    </div>
+                    <span class="badge" style="background: #2e7d32;">Đang chạy</span>
+                </div>
+                <div class="list-item">
+                    <div class="list-item-content">
+                        <div class="list-item-title">💳 GIẢM 50.000Đ KHI THANH TOÁN QUA VNPAY-QR HOẶC ZALOPAY</div>
+                        <div class="list-item-sub">Thời gian áp dụng: 01/01/2026 - 30/06/2026</div>
+                    </div>
+                    <span class="badge" style="background: #2e7d32;">Đang chạy</span>
+                </div>
+                <div class="list-item">
+                    <div class="list-item-content">
+                        <div class="list-item-title">🍿 COMBO BẮP NƯỚC SIÊU ANH HÙNG TẶNG KÈM BÌNH GIỮ NHIỆT</div>
+                        <div class="list-item-sub">Thời gian áp dụng: Đến khi hết quà tặng</div>
+                    </div>
+                    <span class="badge" style="background: #2e7d32;">Đang chạy</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: INQUIRIES -->
+        <div id="tab-inquiries" style="display: none;">
+            <div class="admin-title">
+                <span>Hộp Thư Tiếp Nhận Thông Tin Khách Hàng</span>
+            </div>
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Khách Hàng</th>
+                        <th>Chủ Đề</th>
+                        <th>Thời Gian</th>
+                        <th>Trạng Thái</th>
+                        <th style="text-align: right;">Hành Động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Nguyễn Văn An</strong><br><small style="color: #666;">an.nguyen@gmail.com</small></td>
+                        <td>Hỏi về đặt vé nhóm 50 người tại CGV Landmark 81</td>
+                        <td>10 phút trước</td>
+                        <td><span class="badge" style="background: #e30613;">Chưa đọc</span></td>
+                        <td style="text-align: right;"><button class="btn-action btn-edit">Xem</button></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Phạm Thị Lan</strong><br><small style="color: #666;">lanpham@yahoo.com</small></td>
+                        <td>Góp ý về chất lượng âm thanh rạp chiếu số 3</td>
+                        <td>1 giờ trước</td>
+                        <td><span class="badge" style="background: #e30613;">Chưa đọc</span></td>
+                        <td style="text-align: right;"><button class="btn-action btn-edit">Xem</button></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Trần Thị Bích</strong><br><small style="color: #666;">bich.tran@outlook.com</small></td>
+                        <td>Thắc mắc về điểm tích lũy thẻ thành viên CGV VIP</td>
+                        <td>Hôm qua</td>
+                        <td><span class="badge" style="background: #1565c0;">Đã đọc</span></td>
+                        <td style="text-align: right;"><button class="btn-action btn-edit">Xem</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
+
+@section Scripts {
+<script>
+    function switchAdminTab(tabName, el) {
+        document.querySelectorAll('.admin-nav-item').forEach(item => item.classList.remove('active'));
+        el.classList.add('active');
+        
+        document.getElementById('tab-dashboard').style.display = 'none';
+        document.getElementById('tab-movies').style.display = 'none';
+        document.getElementById('tab-promos').style.display = 'none';
+        document.getElementById('tab-inquiries').style.display = 'none';
+        
+        const target = document.getElementById('tab-' + tabName);
+        if (target) {
+            target.style.display = 'block';
+        }
+    }
+</script>
+}

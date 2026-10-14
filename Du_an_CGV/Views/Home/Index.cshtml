@@ -1,0 +1,356 @@
+@{
+    ViewData["Title"] = "Trang Chủ - Thế giới điện ảnh đỉnh cao";
+}
+
+@section Styles {
+<style>
+    /* Section Title */
+    .section-title-wrap {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+    .section-line {
+        flex: 1;
+        height: 1px;
+        background: #ccc;
+    }
+    .section-title {
+        font-family: 'Montserrat', 'Roboto', sans-serif;
+        font-weight: 800;
+        font-size: 1.5rem;
+        letter-spacing: 2px;
+        color: #1a1a1a;
+        margin: 0;
+    }
+
+    /* Movie Card */
+    .movie-card {
+        position: relative;
+        border-radius: 4px;
+        overflow: hidden;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+        background: #fff;
+    }
+    .movie-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+    .movie-card img {
+        width: 100%;
+        height: 280px;
+        object-fit: cover;
+        display: block;
+    }
+    .movie-info {
+        background: rgba(0, 0, 0, 0.88);
+        padding: 8px 10px;
+    }
+    .movie-title {
+        color: white;
+        font-weight: 700;
+        font-size: 0.82rem;
+        margin: 0;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        text-transform: uppercase;
+    }
+    .rating-badge {
+        position: absolute;
+        top: 6px;
+        left: 6px;
+        color: white;
+        font-size: 0.6rem;
+        font-weight: 700;
+        padding: 2px 6px;
+        border-radius: 2px;
+        z-index: 2;
+    }
+    .grid-4 {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        flex: 1;
+    }
+    .arrow-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: #e30613;
+        color: white;
+        border: none;
+        font-size: 1.2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+    .arrow-btn:hover {
+        background: #b7000b;
+    }
+
+    /* Event Tabs & Cards */
+    .event-tabs {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 20px;
+    }
+    .event-tab {
+        padding: 8px 24px;
+        font-size: 0.82rem;
+        font-weight: 700;
+        background: white;
+        color: #e30613;
+        border: 1px solid #e30613;
+        cursor: pointer;
+        transition: 0.18s;
+    }
+    .event-tab.active {
+        background: #e30613;
+        color: white;
+    }
+    .event-tab:first-child {
+        border-radius: 3px 0 0 3px;
+        border-right: none;
+    }
+    .event-tab:last-child {
+        border-radius: 0 3px 3px 0;
+        border-left: none;
+    }
+    .event-card {
+        border-radius: 6px;
+        overflow: hidden;
+        border: 1px solid #e8e8e8;
+        background: white;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07);
+        cursor: pointer;
+        transition: 0.2s;
+    }
+    .event-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.13);
+    }
+    .event-tag {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        background: #e30613;
+        color: white;
+        font-size: 0.52rem;
+        font-weight: 700;
+        padding: 2px 7px;
+        border-radius: 2px;
+        letter-spacing: 1px;
+    }
+
+    /* Promos */
+    .promo-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+    }
+    .promo-card {
+        border-radius: 4px;
+        overflow: hidden;
+        position: relative;
+        border: 2px solid #ddd;
+        cursor: pointer;
+        height: 120px;
+    }
+    .promo-card img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .promo-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.75), transparent);
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        padding: 8px;
+    }
+</style>
+}
+
+<main style="max-width: 960px; margin: 0 auto; padding: 24px 16px 48px;">
+    <!-- Hero Banner -->
+    <div style="position: relative; margin-bottom: 32px; border-radius: 4px; overflow: hidden; background: #000; box-shadow: 0 4px 16px rgba(0,0,0,0.15);">
+        <a asp-controller="Movie" asp-action="Detail" asp-route-id="1">
+            <img src="https://images.unsplash.com/photo-1440404653325-ab127d49abc1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1200"
+                alt="Hero Banner"
+                style="width: 100%; max-height: 420px; object-fit: cover; object-position: center top; display: block;" />
+        </a>
+        <div style="position: absolute; bottom: 12px; left: 0; right: 0; display: flex; justify-content: center; gap: 7px; z-index: 5;">
+            <button style="width: 8px; height: 8px; border-radius: 50%; border: none; background: #e30613; padding: 0; cursor: pointer;"></button>
+            <button style="width: 8px; height: 8px; border-radius: 50%; border: none; background: rgba(255,255,255,0.6); padding: 0; cursor: pointer;"></button>
+            <button style="width: 8px; height: 8px; border-radius: 50%; border: none; background: rgba(255,255,255,0.6); padding: 0; cursor: pointer;"></button>
+        </div>
+    </div>
+
+    <!-- Movie Selection Section -->
+    <section style="margin-bottom: 40px;">
+        <div class="section-title-wrap">
+            <div class="section-line"></div>
+            <h2 class="section-title">MOVIE SELECTION</h2>
+            <div class="section-line"></div>
+        </div>
+
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <div class="grid-4">
+                <!-- Movie 1 -->
+                <a asp-controller="Movie" asp-action="Detail" asp-route-id="1" class="movie-card">
+                    <div class="rating-badge" style="background: #2e7d32;">T16</div>
+                    <img src="https://images.unsplash.com/photo-1568038479111-87bf80659645?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400"
+                        alt="Lật Mặt 7: Một Điều Ước">
+                    <div class="movie-info">
+                        <p class="movie-title">Lật Mặt 7: Một Điều Ước</p>
+                    </div>
+                </a>
+
+                <!-- Movie 2 -->
+                <a asp-controller="Movie" asp-action="Detail" asp-route-id="2" class="movie-card">
+                    <div class="rating-badge" style="background: #b71c1c;">T18</div>
+                    <img src="https://images.unsplash.com/photo-1778973812223-e5079431fa47?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400"
+                        alt="Vùng Bắt Quỷ Dữ">
+                    <div class="movie-info">
+                        <p class="movie-title">Vùng Bắt Quỷ Dữ</p>
+                    </div>
+                </a>
+
+                <!-- Movie 3 -->
+                <a asp-controller="Movie" asp-action="Detail" asp-route-id="3" class="movie-card">
+                    <div class="rating-badge" style="background: #b71c1c;">T18</div>
+                    <img src="https://images.unsplash.com/photo-1651627567991-e4ec7b8fc72c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400"
+                        alt="Tế Vật Cải Mệnh">
+                    <div class="movie-info">
+                        <p class="movie-title">Tế Vật Cải Mệnh</p>
+                    </div>
+                </a>
+
+                <!-- Movie 4 -->
+                <a asp-controller="Movie" asp-action="Detail" asp-route-id="4" class="movie-card">
+                    <div class="rating-badge" style="background: #e65100;">T13</div>
+                    <img src="https://images.unsplash.com/photo-1609062757924-6c2d01b3b422?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400"
+                        alt="Kỳ Nghỉ Hè Nhớ Đời">
+                    <div class="movie-info">
+                        <p class="movie-title">Kỳ Nghỉ Hè Nhớ Đời</p>
+                    </div>
+                </a>
+            </div>
+            <a asp-controller="Movie" asp-action="Index" class="arrow-btn" title="Xem tất cả phim">›</a>
+        </div>
+    </section>
+
+    <!-- Event Section -->
+    <section style="margin-bottom: 40px;">
+        <div class="section-title-wrap">
+            <div class="section-line"></div>
+            <h2 class="section-title">EVENT & ƯU ĐÃI</h2>
+            <div class="section-line"></div>
+        </div>
+
+        <div class="event-tabs">
+            <button class="event-tab active" type="button">Thành Viên CGV</button>
+            <button class="event-tab" type="button" onclick="window.location.href='@Url.Action("News", "Home")'">Tin Mới & Ưu Đãi</button>
+        </div>
+
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <div class="grid-4">
+                <a asp-controller="Home" asp-action="News" class="event-card">
+                    <div style="position: relative;">
+                        <img src="https://images.unsplash.com/photo-1608170825938-a8ea0305d46c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400"
+                            alt="Event" style="width: 100%; height: 150px; object-fit: cover; display: block;" />
+                        <div class="event-tag">CGV MEMBER</div>
+                    </div>
+                    <div style="padding: 10px 10px 12px;">
+                        <p style="font-size: 0.72rem; font-weight: 700; color: #7b1fa2; margin: 0 0 4px; line-height: 1.3;">
+                            ĐỒNG GIÁ 79.000 ĐỒNG</p>
+                        <p style="font-size: 0.62rem; color: #777; margin: 0; line-height: 1.4;">Cho tất cả khách hàng thành viên CGV</p>
+                    </div>
+                </a>
+
+                <a asp-controller="Home" asp-action="News" class="event-card">
+                    <div style="position: relative;">
+                        <img src="https://images.unsplash.com/photo-1485095329183-d0797cdc5676?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400"
+                            alt="Event" style="width: 100%; height: 150px; object-fit: cover; display: block;" />
+                        <div class="event-tag">CGV MEMBER</div>
+                    </div>
+                    <div style="padding: 10px 10px 12px;">
+                        <p style="font-size: 0.72rem; font-weight: 700; color: #ff6600; margin: 0 0 4px; line-height: 1.3;">
+                            ONLINE COMBO PACKAGE</p>
+                        <p style="font-size: 0.62rem; color: #777; margin: 0; line-height: 1.4;">Trọn gói tiện lợi, trọn vẹn trải nghiệm</p>
+                    </div>
+                </a>
+
+                <a asp-controller="Home" asp-action="News" class="event-card">
+                    <div style="position: relative;">
+                        <img src="https://images.unsplash.com/photo-1688678004647-945d5aaf91c1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400"
+                            alt="Event" style="width: 100%; height: 150px; object-fit: cover; display: block;" />
+                        <div class="event-tag">CGV MEMBER</div>
+                    </div>
+                    <div style="padding: 10px 10px 12px;">
+                        <p style="font-size: 0.72rem; font-weight: 700; color: #e30613; margin: 0 0 4px; line-height: 1.3;">
+                            QUÀ TẶNG ĐẦY TAY</p>
+                        <p style="font-size: 0.62rem; color: #777; margin: 0; line-height: 1.4;">Sinh nhật ngày – quà tặng ngập tràn</p>
+                    </div>
+                </a>
+
+                <a asp-controller="Account" asp-action="Register" class="event-card">
+                    <div style="position: relative;">
+                        <img src="https://images.unsplash.com/photo-1534447677768-be436bb09401?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400"
+                            alt="Event" style="width: 100%; height: 150px; object-fit: cover; display: block;" />
+                        <div class="event-tag">BIRTHDAY</div>
+                    </div>
+                    <div style="padding: 10px 10px 12px;">
+                        <p style="font-size: 0.72rem; font-weight: 700; color: #1565c0; margin: 0 0 4px; line-height: 1.3;">
+                            HAPPY BIRTHDAY TO YOU!</p>
+                        <p style="font-size: 0.62rem; color: #777; margin: 0; line-height: 1.4;">Ưu đãi đặc quyền tháng sinh nhật của bạn</p>
+                    </div>
+                </a>
+            </div>
+            <a asp-controller="Home" asp-action="News" class="arrow-btn" title="Xem thêm sự kiện">›</a>
+        </div>
+    </section>
+
+    <!-- Promo Banners Section -->
+    <section style="margin-bottom: 20px;">
+        <div class="promo-grid">
+            <a asp-controller="Home" asp-action="News" class="promo-card">
+                <img src="https://images.unsplash.com/photo-1608170825938-a8ea0305d46c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400"
+                    alt="Promo">
+                <div class="promo-overlay">
+                    <p style="color: white; font-weight: 700; font-size: 0.75rem; margin: 0;">QUÀ TẶNG KÈO ĐIỆN ẢNH</p>
+                    <p style="color: #ffd700; font-size: 0.7rem; margin: 0;">XEM PHIM HẾT Ý CÙNG BẠN BÈ</p>
+                </div>
+                <div style="position: absolute; top: 8px; left: 8px; background: #e30613; color: white; font-size: 0.6rem; font-weight: 700; padding: 1px 5px; border-radius: 2px;">
+                    CGV</div>
+            </a>
+
+            <a asp-controller="Account" asp-action="Register"
+                style="border-radius: 4px; overflow: hidden; background: linear-gradient(135deg,#ff8c00,#ff4500,#8b0000); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; gap: 6px; height: 120px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <p style="color: white; font-size: 0.65rem; font-weight: 700; margin: 0;">CGV</p>
+                <p style="font-family: 'Oswald', sans-serif; font-size: 2rem; font-weight: 700; margin: 0; line-height: 1;">
+                    <span style="color: #ffd700;">Fan</span><span style="color: white;">C</span><span style="color: #ffd700;">i</span>
+                </p>
+                <p style="color: #ffe08a; font-size: 0.58rem; text-align: center; margin: 0;">DÀNH RIÊNG CHO THÀNH VIÊN CGV DƯỚI 23 TUỔI</p>
+            </a>
+
+            <a asp-controller="Home" asp-action="Rental" class="promo-card" style="border-color: #333;">
+                <img src="https://images.unsplash.com/photo-1485095329183-d0797cdc5676?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400"
+                    alt="Promo" style="filter: brightness(0.55);">
+                <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;">
+                    <p style="color: white; font-weight: 700; font-size: 0.75rem; margin: 0;">THUÊ RẠP / SỰ KIỆN</p>
+                    <p style="color: #ffd700; font-weight: 700; font-size: 0.75rem; margin: 0;">& VÉ NHÓM DOANH NGHIỆP</p>
+                    <span style="margin-top: 4px; background: #e30613; color: white; border: none; font-size: 0.65rem; font-weight: 700; padding: 4px 12px; border-radius: 2px;">XEM NGAY</span>
+                </div>
+            </a>
+        </div>
+    </section>
+</main>

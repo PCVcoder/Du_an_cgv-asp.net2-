@@ -1,0 +1,254 @@
+@{
+    ViewData["Title"] = "Đặt Vé Xem Phim - Chọn Ghế";
+}
+
+@section Styles {
+<style>
+    .btn-time {
+        padding: 9px 16px; border: 1px solid #ccc; background: white; color: #333;
+        border-radius: 3px; font-weight: 700; font-size: 0.88rem; transition: 0.2s; cursor: pointer;
+    }
+    .btn-time:hover { border-color: #e30613; color: #e30613; }
+    .btn-time.active { background: #e30613; color: white; border-color: #e30613; }
+    
+    /* Seat Map Styles */
+    .seat {
+        width: 26px; height: 24px; padding: 0; border: 1px solid #888;
+        border-radius: 3px 3px 6px 6px; background: white; color: #333;
+        font-size: 0.55rem; font-weight: 700; text-align: center; line-height: 22px; cursor: pointer;
+        transition: transform 0.1s, background 0.15s;
+    }
+    .seat:hover:not(.occupied) { transform: scale(1.15); border-color: #e30613; }
+    .seat.vip { background: #fff0e8; border-color: #d28a67; }
+    .seat.occupied { background: #999; border-color: #aaa; color: white; cursor: not-allowed; opacity: 0.65; }
+    .seat.selected { background: #e30613 !important; border-color: #e30613 !important; color: white !important; }
+    
+    .seat-row {
+        display: grid; grid-template-columns: 18px 78px 1fr 78px 18px; column-gap: 12px; align-items: center; margin-bottom: 5px;
+    }
+    .seat-block { display: grid; gap: 3px; }
+    .seat-block-left { grid-template-columns: repeat(3, 26px); }
+    .seat-block-center { grid-template-columns: repeat(12, 26px); justify-content: center; padding: 2px 5px; }
+    .seat-block-center.vip-zone { border-left: 1px dashed #d26b54; border-right: 1px dashed #d26b54; }
+    .seat-block-right { grid-template-columns: repeat(3, 26px); }
+</style>
+}
+
+<main style="max-width: 960px; margin: 0 auto; padding: 28px 16px 56px;">
+    <a asp-controller="Movie" asp-action="Index" style="display: inline-block; color: #e30613; font-size: 0.82rem; font-weight: 700; margin-bottom: 18px;">← Quay lại danh sách phim</a>
+    
+    <div style="display: grid; grid-template-columns: 240px 1fr; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+        
+        <!-- Movie Info Left -->
+        <div style="background: #1f1f1f; padding: 24px; color: white; display: flex; flex-direction: column;">
+            <img src="https://images.unsplash.com/photo-1568038479111-87bf80659645?w=400" alt="Lật Mặt 7: Một Điều Ước" style="width: 100%; height: 300px; object-fit: cover; border-radius: 4px; box-shadow: 0 2px 10px rgba(0,0,0,0.5);" />
+            <h2 style="font-family: 'Montserrat', 'Roboto', sans-serif; font-size: 1.15rem; font-weight: 800; line-height: 1.4; margin: 16px 0 6px;">Lật Mặt 7: Một Điều Ước</h2>
+            <p style="color: #bbb; font-size: 0.78rem; margin: 0 0 16px;">121 phút · T16 · 2D Phụ Đề</p>
+
+            <div style="border-top: 1px solid #333; padding-top: 14px; margin-top: auto; font-size: 0.78rem; color: #aaa;">
+                <p style="margin: 0 0 4px;">Rạp: <strong style="color: white;">CGV Landmark 81</strong></p>
+                <p style="margin: 0 0 4px;">Phòng chiếu: <strong style="color: white;">Cinema 03 (IMAX)</strong></p>
+                <p style="margin: 0;">Suất: <strong style="color: #e30613;">19:20 - Hôm nay</strong></p>
+            </div>
+        </div>
+
+        <!-- Booking Section Right -->
+        <div style="padding: 32px 36px;">
+            <p style="color: #e30613; font-size: 0.78rem; font-weight: 800; letter-spacing: 1px; margin: 0 0 4px;">ĐẶT VÉ TRỰC TUYẾN</p>
+            <h1 style="font-family: 'Montserrat', 'Roboto', sans-serif; font-size: 1.5rem; font-weight: 800; margin: 0 0 24px; color: #1a1a1a;">CHỌN SUẤT CHIẾU & GHẾ NGỒI</h1>
+
+            <label style="display: block; font-size: 0.82rem; font-weight: 700; margin-bottom: 8px;">Chọn cụm rạp</label>
+            <select style="width: 100%; padding: 11px 14px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 20px; background: white; font-size: 0.88rem;">
+                <option>CGV Vincom Center Landmark 81</option>
+                <option>CGV Sư Vạn Hạnh</option>
+                <option>CGV Vincom Đồng Khởi</option>
+                <option>CGV Crescent Mall</option>
+                <option>CGV Aeon Tân Phú</option>
+            </select>
+
+            <p style="font-size: 0.82rem; font-weight: 700; margin: 0 0 10px;">Suất chiếu hôm nay</p>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px;">
+                <button type="button" class="btn-time">10:15</button>
+                <button type="button" class="btn-time">13:30</button>
+                <button type="button" class="btn-time">16:45</button>
+                <button type="button" class="btn-time active">19:20</button>
+                <button type="button" class="btn-time">21:50</button>
+            </div>
+
+            <!-- Seat Map -->
+            <p style="font-size: 0.88rem; font-weight: 700; margin: 0 0 12px; color: #111;">Sơ đồ ghế ngồi</p>
+
+            <div style="overflow-x: auto; padding-bottom: 8px;">
+                <div style="min-width: 620px; background: #f9f7f2; border: 1px solid #e0dad0; border-radius: 6px; padding: 20px 16px 16px;">
+                    <p style="text-align: center; color: #b24c32; font-size: 0.72rem; margin: 0 0 6px; font-weight: 800; letter-spacing: 2px;">MÀN HÌNH CHIẾU</p>
+                    <div style="height: 6px; margin: 0 48px 10px; background: linear-gradient(to bottom, #c0b8a8, #f9f7f2); border-radius: 50%;"></div>
+                    <p style="text-align: center; color: #999; font-size: 0.65rem; margin: 0 0 18px;">Khu vực trung tâm xem tốt nhất</p>
+
+                    <!-- Seats Grid -->
+                    <div style="display: grid; gap: 5px;">
+                        <!-- ROW C -->
+                        <div class="seat-row">
+                            <span style="font-size: 0.65rem; font-weight: 700; text-align: center;">C</span>
+                            <div class="seat-block seat-block-left">
+                                <div class="seat" onclick="toggleSeat(this, 'C1')">1</div>
+                                <div class="seat" onclick="toggleSeat(this, 'C2')">2</div>
+                                <div class="seat" onclick="toggleSeat(this, 'C3')">3</div>
+                            </div>
+                            <div class="seat-block seat-block-center">
+                                <div class="seat" onclick="toggleSeat(this, 'C4')">4</div>
+                                <div class="seat occupied">5</div>
+                                <div class="seat occupied">6</div>
+                                <div class="seat" onclick="toggleSeat(this, 'C7')">7</div>
+                                <div class="seat" onclick="toggleSeat(this, 'C8')">8</div>
+                                <div class="seat" onclick="toggleSeat(this, 'C9')">9</div>
+                                <div class="seat" onclick="toggleSeat(this, 'C10')">10</div>
+                                <div class="seat" onclick="toggleSeat(this, 'C11')">11</div>
+                                <div class="seat" onclick="toggleSeat(this, 'C12')">12</div>
+                                <div class="seat" onclick="toggleSeat(this, 'C13')">13</div>
+                                <div class="seat" onclick="toggleSeat(this, 'C14')">14</div>
+                                <div class="seat" onclick="toggleSeat(this, 'C15')">15</div>
+                            </div>
+                            <div class="seat-block seat-block-right">
+                                <div class="seat" onclick="toggleSeat(this, 'C16')">16</div>
+                                <div class="seat" onclick="toggleSeat(this, 'C17')">17</div>
+                                <div class="seat occupied">18</div>
+                            </div>
+                            <span style="font-size: 0.65rem; font-weight: 700; text-align: center;">C</span>
+                        </div>
+
+                        <!-- ROW D (VIP) -->
+                        <div class="seat-row">
+                            <span style="font-size: 0.65rem; font-weight: 700; text-align: center; color: #d26b54;">D</span>
+                            <div class="seat-block seat-block-left">
+                                <div class="seat occupied">1</div>
+                                <div class="seat" onclick="toggleSeat(this, 'D2')">2</div>
+                                <div class="seat" onclick="toggleSeat(this, 'D3')">3</div>
+                            </div>
+                            <div class="seat-block seat-block-center vip-zone">
+                                <div class="seat vip" onclick="toggleSeat(this, 'D4')">4</div>
+                                <div class="seat vip" onclick="toggleSeat(this, 'D5')">5</div>
+                                <div class="seat vip" onclick="toggleSeat(this, 'D6')">6</div>
+                                <div class="seat vip" onclick="toggleSeat(this, 'D7')">7</div>
+                                <div class="seat vip occupied">8</div>
+                                <div class="seat vip occupied">9</div>
+                                <div class="seat vip selected" onclick="toggleSeat(this, 'D10')">10</div>
+                                <div class="seat vip selected" onclick="toggleSeat(this, 'D11')">11</div>
+                                <div class="seat vip" onclick="toggleSeat(this, 'D12')">12</div>
+                                <div class="seat vip" onclick="toggleSeat(this, 'D13')">13</div>
+                                <div class="seat vip" onclick="toggleSeat(this, 'D14')">14</div>
+                                <div class="seat vip occupied">15</div>
+                            </div>
+                            <div class="seat-block seat-block-right">
+                                <div class="seat" onclick="toggleSeat(this, 'D16')">16</div>
+                                <div class="seat" onclick="toggleSeat(this, 'D17')">17</div>
+                                <div class="seat" onclick="toggleSeat(this, 'D18')">18</div>
+                            </div>
+                            <span style="font-size: 0.65rem; font-weight: 700; text-align: center; color: #d26b54;">D</span>
+                        </div>
+
+                        <!-- ROW E (VIP) -->
+                        <div class="seat-row">
+                            <span style="font-size: 0.65rem; font-weight: 700; text-align: center; color: #d26b54;">E</span>
+                            <div class="seat-block seat-block-left">
+                                <div class="seat" onclick="toggleSeat(this, 'E1')">1</div>
+                                <div class="seat" onclick="toggleSeat(this, 'E2')">2</div>
+                                <div class="seat" onclick="toggleSeat(this, 'E3')">3</div>
+                            </div>
+                            <div class="seat-block seat-block-center vip-zone">
+                                <div class="seat vip occupied">4</div>
+                                <div class="seat vip" onclick="toggleSeat(this, 'E5')">5</div>
+                                <div class="seat vip" onclick="toggleSeat(this, 'E6')">6</div>
+                                <div class="seat vip" onclick="toggleSeat(this, 'E7')">7</div>
+                                <div class="seat vip" onclick="toggleSeat(this, 'E8')">8</div>
+                                <div class="seat vip" onclick="toggleSeat(this, 'E9')">9</div>
+                                <div class="seat vip" onclick="toggleSeat(this, 'E10')">10</div>
+                                <div class="seat vip" onclick="toggleSeat(this, 'E11')">11</div>
+                                <div class="seat vip occupied">12</div>
+                                <div class="seat vip" onclick="toggleSeat(this, 'E13')">13</div>
+                                <div class="seat vip" onclick="toggleSeat(this, 'E14')">14</div>
+                                <div class="seat vip" onclick="toggleSeat(this, 'E15')">15</div>
+                            </div>
+                            <div class="seat-block seat-block-right">
+                                <div class="seat" onclick="toggleSeat(this, 'E16')">16</div>
+                                <div class="seat" onclick="toggleSeat(this, 'E17')">17</div>
+                                <div class="seat occupied">18</div>
+                            </div>
+                            <span style="font-size: 0.65rem; font-weight: 700; text-align: center; color: #d26b54;">E</span>
+                        </div>
+                    </div>
+
+                    <!-- Legend -->
+                    <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-top: 18px; padding-top: 12px; border-top: 1px solid #e0d8ca;">
+                        <span style="display: flex; align-items: center; gap: 6px; color: #555; font-size: 0.72rem;">
+                            <span style="width: 16px; height: 14px; border: 1px solid #888; border-radius: 2px 2px 4px 4px; background: white;"></span> Ghế thường (90.000đ)
+                        </span>
+                        <span style="display: flex; align-items: center; gap: 6px; color: #555; font-size: 0.72rem;">
+                            <span style="width: 16px; height: 14px; border: 1px solid #d28a67; border-radius: 2px 2px 4px 4px; background: #fff0e8;"></span> Ghế VIP (110.000đ)
+                        </span>
+                        <span style="display: flex; align-items: center; gap: 6px; color: #555; font-size: 0.72rem;">
+                            <span style="width: 16px; height: 14px; border: 1px solid #e30613; border-radius: 2px 2px 4px 4px; background: #e30613;"></span> Đang chọn
+                        </span>
+                        <span style="display: flex; align-items: center; gap: 6px; color: #555; font-size: 0.72rem;">
+                            <span style="width: 16px; height: 14px; border: 1px solid #999; border-radius: 2px 2px 4px 4px; background: #999;"></span> Đã đặt
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Checkout Section -->
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 24px; padding-top: 18px; border-top: 1px solid #eee;">
+                <div>
+                    <p style="color: #777; font-size: 0.75rem; margin: 0 0 4px;">Ghế đã chọn:</p>
+                    <p id="selected-seats-text" style="font-weight: 800; font-size: 1.1rem; color: #e30613; margin: 0;">D10, D11</p>
+                    <p id="total-price-text" style="color: #555; font-size: 0.82rem; margin: 4px 0 0;">Tổng tiền: <strong>220.000 VNĐ</strong></p>
+                </div>
+                <button type="button" onclick="confirmBooking()" style="min-width: 200px; background: #e30613; color: white; border: none; border-radius: 4px; padding: 14px 20px; font-weight: 800; font-size: 0.95rem; letter-spacing: 0.5px; cursor: pointer; transition: background 0.15s;">
+                    TIẾP TỤC ĐẶT VÉ ›
+                </button>
+            </div>
+        </div>
+    </div>
+</main>
+
+@section Scripts {
+<script>
+    let selectedSeats = ['D10', 'D11'];
+    
+    function toggleSeat(elem, seatCode) {
+        if (elem.classList.contains('occupied')) return;
+        
+        if (elem.classList.contains('selected')) {
+            elem.classList.remove('selected');
+            selectedSeats = selectedSeats.filter(s => s !== seatCode);
+        } else {
+            elem.classList.add('selected');
+            selectedSeats.push(seatCode);
+        }
+        
+        updateSummary();
+    }
+    
+    function updateSummary() {
+        const textElem = document.getElementById('selected-seats-text');
+        const priceElem = document.getElementById('total-price-text');
+        
+        if (selectedSeats.length === 0) {
+            textElem.textContent = 'Chưa chọn ghế';
+            priceElem.innerHTML = 'Tổng tiền: <strong>0 VNĐ</strong>';
+        } else {
+            textElem.textContent = selectedSeats.join(', ');
+            const total = selectedSeats.length * 110000;
+            priceElem.innerHTML = 'Tổng tiền: <strong>' + total.toLocaleString('vi-VN') + ' VNĐ</strong>';
+        }
+    }
+    
+    function confirmBooking() {
+        if (selectedSeats.length === 0) {
+            alert('Vui lòng chọn ít nhất 1 ghế để tiếp tục!');
+            return;
+        }
+        alert('Đặt vé thành công cho các ghế: ' + selectedSeats.join(', ') + '!\nĐang chuyển tới trang Vé của tôi...');
+        window.location.href = '@Url.Action("MyTickets", "Booking")';
+    }
+</script>
+}

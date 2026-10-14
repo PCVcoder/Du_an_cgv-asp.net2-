@@ -1,0 +1,251 @@
+@{
+    ViewData["Title"] = "CGV L'Amour - Rạp Chiếu Phim Đẳng Cấp Thượng Lưu";
+}
+
+@section Styles {
+<style>
+    .lamour-wrapper {
+        background: #0f0f0f;
+        color: white;
+        margin: -24px -16px -40px;
+        padding-bottom: 60px;
+    }
+    
+    /* Hero */
+    .hero { position: relative; height: 380px; overflow: hidden; }
+    .hero img { width: 100%; height: 100%; object-fit: cover; object-position: center 40%; filter: brightness(0.4); }
+    .hero-overlay { position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 30%, #0f0f0f); }
+    .hero-content { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+    
+    .hero-title {
+        font-family: 'Montserrat', Georgia, serif; font-size: 3.5rem; font-weight: 800; margin: 0;
+        letter-spacing: 6px; background: linear-gradient(135deg, #f9a8d4, #fde68a, #f9a8d4);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: none;
+    }
+
+    /* Container */
+    .container { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+    .breadcrumb { padding: 18px 0; font-size: 0.78rem; color: #888; display: flex; gap: 8px; align-items: center; }
+
+    /* Booking Steps */
+    .booking-steps {
+        margin-bottom: 40px; background: linear-gradient(135deg, #1a1117, #24131d);
+        border: 1px solid rgba(244,163,200,0.28); border-radius: 12px; padding: 24px 28px;
+    }
+    .step-tabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 22px; }
+    .step-tab { font-size: 0.75rem; font-weight: 700; text-align: center; padding-bottom: 8px; border-bottom: 3px solid #3a2832; color: #777; }
+    .step-tab.active { border-color: #f43f7e; color: #f9a8d4; }
+    
+    .form-select {
+        width: 100%; background: #171717; color: white; border: 1px solid #634151;
+        border-radius: 6px; padding: 11px 12px; outline: none; font-size: 0.85rem;
+    }
+
+    /* Section Title */
+    .section-title {
+        font-family: 'Montserrat', Georgia, serif; font-size: 1.4rem; color: #f9a8d4;
+        text-align: center; letter-spacing: 2px; margin-bottom: 28px; font-weight: 700;
+    }
+
+    /* Seat Categories */
+    .cat-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 44px; }
+    .cat-card {
+        background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
+        padding: 18px 12px; text-align: center; transition: 0.2s;
+    }
+    .cat-card:hover { background: rgba(255,255,255,0.08); transform: translateY(-3px); }
+
+    /* Seat Map Preview */
+    .seat-map { text-align: center; margin-bottom: 44px; }
+    
+    /* Features */
+    .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; border-radius: 10px; overflow: hidden; margin-bottom: 12px; }
+    .feature-main { grid-row: span 2; }
+    .feature-main img { width: 100%; height: 100%; object-fit: cover; display: block; min-height: 320px; }
+    .feature-sub { position: relative; overflow: hidden; }
+    .feature-sub img { width: 100%; height: 160px; object-fit: cover; display: block; filter: brightness(0.6); }
+
+    /* Amenities */
+    .amenity-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .amenity-card {
+        background: rgba(255,255,255,0.04); border: 1px solid rgba(244,163,200,0.15);
+        border-radius: 10px; padding: 24px 16px; text-align: center;
+    }
+</style>
+}
+
+<div class="lamour-wrapper">
+    <!-- Hero Banner -->
+    <div class="hero">
+        <img src="https://images.unsplash.com/photo-1749900075879-5b8fd33be4f5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1200" alt="L'Amour">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <div style="font-family: 'Montserrat', Georgia, serif; font-size: 0.8rem; letter-spacing: 8px; color: #e8b4c8; text-transform: uppercase; margin-bottom: 4px;">
+                CGV Presents
+            </div>
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <div style="width: 60px; height: 1px; background: linear-gradient(to right, transparent, #e8b4c8);"></div>
+                <h1 class="hero-title">L'AMOUR</h1>
+                <div style="width: 60px; height: 1px; background: linear-gradient(to left, transparent, #e8b4c8);"></div>
+            </div>
+            <p style="color: #e8b4c8; font-size: 0.95rem; letter-spacing: 3px; margin: 0; font-style: italic;">Trải nghiệm điện ảnh lãng mạn đẳng cấp thượng lưu</p>
+            <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; justify-content: center;">
+                <span style="font-size: 0.72rem; color: #d4a0b8; letter-spacing: 1px; padding: 5px 12px; border: 1px solid rgba(244,163,200,0.3); border-radius: 20px;">✦ Giường nằm êm ái</span>
+                <span style="font-size: 0.72rem; color: #d4a0b8; letter-spacing: 1px; padding: 5px 12px; border: 1px solid rgba(244,163,200,0.3); border-radius: 20px;">✦ Dịch vụ tận giường</span>
+                <span style="font-size: 0.72rem; color: #d4a0b8; letter-spacing: 1px; padding: 5px 12px; border: 1px solid rgba(244,163,200,0.3); border-radius: 20px;">✦ Rượu vang & Champagne</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Breadcrumb -->
+        <nav class="breadcrumb">
+            <a asp-controller="Home" asp-action="Index" style="color: #f43f7e; text-decoration: none;">🏠 Trang chủ</a>
+            <span>›</span>
+            <a asp-controller="Cinema" asp-action="Index" style="color: #888; text-decoration: none;">Rạp CGV</a>
+            <span>›</span>
+            <span style="color: #f43f7e; font-weight: 600;">L'Amour</span>
+        </nav>
+
+        <!-- Booking Steps -->
+        <section class="booking-steps">
+            <div class="step-tabs">
+                <div class="step-tab active">1. Chọn phim</div>
+                <div class="step-tab">2. Chọn rạp</div>
+                <div class="step-tab">3. Chọn ghế</div>
+                <div class="step-tab">4. Dịch vụ</div>
+                <div class="step-tab">5. F&B</div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <label style="display: grid; gap: 7px;">
+                    <span style="color: #f9a8d4; font-size: 0.8rem; font-weight: 700;">Phim đang chiếu tại L'Amour</span>
+                    <select class="form-select" id="lamour-movie-select">
+                        <option value="">-- Chọn phim muốn xem --</option>
+                        <option value="1">Lật Mặt 7: Một Điều Ước · 121 phút</option>
+                        <option value="2">Vùng Bắt Quỷ Dữ · 94 phút</option>
+                        <option value="3">Hành Tinh Khỉ: Vương Quốc Mới · 145 phút</option>
+                    </select>
+                </label>
+
+                <label style="display: grid; gap: 7px;">
+                    <span style="color: #f9a8d4; font-size: 0.8rem; font-weight: 700;">Rạp có phòng chiếu L'Amour</span>
+                    <select class="form-select" id="lamour-cinema-select">
+                        <option value="">CGV Hoàng Văn Thụ (TP.HCM)</option>
+                        <option value="">CGV Vincom Landmark 81 (TP.HCM)</option>
+                        <option value="">CGV Vincom Metropolis Liễu Giai (Hà Nội)</option>
+                    </select>
+                </label>
+            </div>
+            
+            <div style="display: flex; justify-content: flex-end; margin-top: 18px;">
+                <a asp-controller="Booking" asp-action="Index" asp-route-movieId="1" asp-route-cinemaId="1" style="background: linear-gradient(135deg, #f43f7e, #e11d48); color: white; text-decoration: none; padding: 10px 24px; border-radius: 4px; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.5px;">
+                    ĐẶT VÉ L'AMOUR NGAY
+                </a>
+            </div>
+        </section>
+
+        <!-- Categories -->
+        <section>
+            <h2 class="section-title">✦ Hạng Ghế & Giường L'Amour ✦</h2>
+            <div class="cat-grid">
+                <!-- Standard -->
+                <div class="cat-card">
+                    <div style="font-size: 1.8rem; margin-bottom: 8px;">🪑</div>
+                    <div style="width: 28px; height: 14px; border-radius: 3px; background: #4a90d9; border: 2px solid #2c6fad; margin: 0 auto 10px;"></div>
+                    <p style="font-weight: 700; font-size: 0.85rem; margin: 0 0 4px;">Standard</p>
+                    <p style="font-size: 0.68rem; color: #aaa; margin: 0 0 8px; line-height: 1.4;">Ghế thường, êm ái tiêu chuẩn quốc tế</p>
+                    <p style="font-size: 0.85rem; font-weight: 700; color: #4a90d9; margin: 0;">90.000đ</p>
+                </div>
+                <!-- Premium -->
+                <div class="cat-card">
+                    <div style="font-size: 1.8rem; margin-bottom: 8px;">🛋️</div>
+                    <div style="width: 28px; height: 14px; border-radius: 3px; background: #8b5cf6; border: 2px solid #6d38e0; margin: 0 auto 10px;"></div>
+                    <p style="font-weight: 700; font-size: 0.85rem; margin: 0 0 4px;">Premium</p>
+                    <p style="font-size: 0.68rem; color: #aaa; margin: 0 0 8px; line-height: 1.4;">Ghế ngả lưng cao cấp, rộng rãi</p>
+                    <p style="font-size: 0.85rem; font-weight: 700; color: #8b5cf6; margin: 0;">130.000đ</p>
+                </div>
+                <!-- VIP -->
+                <div class="cat-card">
+                    <div style="font-size: 1.8rem; margin-bottom: 8px;">👑</div>
+                    <div style="width: 28px; height: 14px; border-radius: 3px; background: #f59e0b; border: 2px solid #c47a0a; margin: 0 auto 10px;"></div>
+                    <p style="font-weight: 700; font-size: 0.85rem; margin: 0 0 4px;">VIP</p>
+                    <p style="font-size: 0.68rem; color: #aaa; margin: 0 0 8px; line-height: 1.4;">Ghế VIP bọc da, tầm nhìn tối ưu</p>
+                    <p style="font-size: 0.85rem; font-weight: 700; color: #f59e0b; margin: 0;">180.000đ</p>
+                </div>
+                <!-- Couple -->
+                <div class="cat-card">
+                    <div style="font-size: 1.8rem; margin-bottom: 8px;">💑</div>
+                    <div style="width: 28px; height: 14px; border-radius: 3px; background: #f43f7e; border: 2px solid #c0174f; margin: 0 auto 10px;"></div>
+                    <p style="font-weight: 700; font-size: 0.85rem; margin: 0 0 4px;">L'Amour Couple</p>
+                    <p style="font-size: 0.68rem; color: #aaa; margin: 0 0 8px; line-height: 1.4;">Giường đôi lãng mạn, ấm áp riêng tư</p>
+                    <p style="font-size: 0.85rem; font-weight: 700; color: #f43f7e; margin: 0;">300.000đ</p>
+                </div>
+                <!-- Sweetbox -->
+                <div class="cat-card">
+                    <div style="font-size: 1.8rem; margin-bottom: 8px;">🛏️</div>
+                    <div style="width: 28px; height: 14px; border-radius: 3px; background: #e879a0; border: 2px solid #c0174f; margin: 0 auto 10px;"></div>
+                    <p style="font-weight: 700; font-size: 0.85rem; margin: 0 0 4px;">Sweetbox Suite</p>
+                    <p style="font-size: 0.68rem; color: #aaa; margin: 0 0 8px; line-height: 1.4;">Khoang giường nằm hoàng gia đẳng cấp</p>
+                    <p style="font-size: 0.85rem; font-weight: 700; color: #e879a0; margin: 0;">600.000đ / cặp</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features -->
+        <section style="margin-bottom: 48px;">
+            <h2 class="section-title">✦ Trải Nghiệm L'Amour Thượng Đẳng ✦</h2>
+            
+            <div class="feature-grid">
+                <div class="feature-main">
+                    <img src="https://images.unsplash.com/photo-1599664305147-82f7d862708a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600" alt="Sweetbox Suite">
+                </div>
+                <div style="display: grid; grid-template-rows: repeat(2, 1fr); gap: 4px;">
+                    <div class="feature-sub">
+                        <img src="https://images.unsplash.com/photo-1595695162612-1d7fc11e46ba?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600" alt="Couple Seat">
+                        <div style="position: absolute; inset: 0; display: flex; align-items: flex-end; padding: 12px; background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);">
+                            <p style="color: white; font-size: 0.8rem; font-weight: 700; margin: 0;">L'Amour Couple Seat</p>
+                        </div>
+                    </div>
+                    <div class="feature-sub">
+                        <img src="https://images.unsplash.com/photo-1746439324737-2c9f9a3e81a6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600" alt="VIP Recliner">
+                        <div style="position: absolute; inset: 0; display: flex; align-items: flex-end; padding: 12px; background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);">
+                            <p style="color: white; font-size: 0.8rem; font-weight: 700; margin: 0;">VIP Recliner</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(244,163,200,0.2); border-radius: 0 0 10px 10px; padding: 16px 24px;">
+                <p style="font-weight: 700; font-size: 0.95rem; color: #f9a8d4; margin: 0 0 6px;">Sweetbox & L'Amour Suite</p>
+                <p style="color: #aaa; font-size: 0.8rem; margin: 0; line-height: 1.6;">Phòng chiếu được thiết kế với chăn gối êm ái, gối tựa cao cấp, dép đi trong phòng cùng menu ẩm thực cao cấp, mang lại không gian thư giãn như tại chính ngôi nhà bạn.</p>
+            </div>
+        </section>
+
+        <!-- Amenities -->
+        <section>
+            <h2 class="section-title">✦ Tiện Ích Đặc Quyền ✦</h2>
+            <div class="amenity-grid">
+                <div class="amenity-card">
+                    <div style="font-size: 2.2rem; margin-bottom: 10px;">🍷</div>
+                    <p style="font-weight: 700; font-size: 0.88rem; color: #f9a8d4; margin: 0 0 6px;">Rượu vang & Cocktail</p>
+                    <p style="font-size: 0.72rem; color: #888; margin: 0; line-height: 1.5;">Menu đồ uống cao cấp phục vụ tận giường</p>
+                </div>
+                <div class="amenity-card">
+                    <div style="font-size: 2.2rem; margin-bottom: 10px;">🍿</div>
+                    <p style="font-weight: 700; font-size: 0.88rem; color: #f9a8d4; margin: 0 0 6px;">Bắp rang & Snack VIP</p>
+                    <p style="font-size: 0.72rem; color: #888; margin: 0; line-height: 1.5;">Combo ăn nhẹ sang trọng, miễn phí trà và cà phê</p>
+                </div>
+                <div class="amenity-card">
+                    <div style="font-size: 2.2rem; margin-bottom: 10px;">🌹</div>
+                    <p style="font-weight: 700; font-size: 0.88rem; color: #f9a8d4; margin: 0 0 6px;">Gói quà lãng mạn</p>
+                    <p style="font-size: 0.72rem; color: #888; margin: 0; line-height: 1.5;">Hoa hồng, socola, thiệp chúc mừng theo yêu cầu</p>
+                </div>
+                <div class="amenity-card">
+                    <div style="font-size: 2.2rem; margin-bottom: 10px;">🎂</div>
+                    <p style="font-weight: 700; font-size: 0.88rem; color: #f9a8d4; margin: 0 0 6px;">Dịch vụ sinh nhật & kỷ niệm</p>
+                    <p style="font-size: 0.72rem; color: #888; margin: 0; line-height: 1.5;">Bánh kem, nến, set up không gian riêng tư</p>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>

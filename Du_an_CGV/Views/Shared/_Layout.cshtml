@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@(ViewData["Title"] != null ? ViewData["Title"] + " - CGV Cinemas" : "CGV Cinemas Việt Nam - Rạp chiếu phim hàng đầu")</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&family=Roboto:wght@400;500;600;700;800&family=Oswald:wght@700&display=swap" rel="stylesheet">
+    
+    <!-- CSS Stylesheets -->
+    <link rel="stylesheet" href="~/css/common.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/style.css" asp-append-version="true" />
+    
+    <style>
+        body { margin: 0; background: #f5f0e8; min-width: 360px; font-family: "Roboto", sans-serif; color: #333; }
+        * { box-sizing: border-box; }
+        a { text-decoration: none; color: inherit; }
+        button, a, input, select { font-family: "Roboto", sans-serif; }
+    </style>
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="top-bar-inner">
+            <div class="top-links">
+                <a asp-controller="Home" asp-action="News">TIN MỚI & ƯU ĐÃI</a>
+                <a asp-controller="Booking" asp-action="MyTickets">VÉ CỦA TÔI (0)</a>
+                <a asp-controller="Admin" asp-action="Index" class="top-admin">⚙️ QUẢN LÝ</a>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <a asp-controller="Account" asp-action="Register" style="color: #ccc; text-decoration: none;">ĐĂNG NHẬP / ĐĂNG KÝ</a>
+                <div style="display: flex; border: 1px solid #555; border-radius: 2px;">
+                    <button class="lang-btn" style="background: #e30613; color: white;">VN</button>
+                    <button class="lang-btn" style="background: transparent; color: #aaa;">EN</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Header -->
+    <header class="main-header">
+        <div class="main-header-inner">
+            <a asp-controller="Home" asp-action="Index" class="logo">
+                <span>CGV</span><span>✦</span>
+            </a>
+            
+            <nav class="main-nav">
+                <div class="nav-item">
+                    PHIM
+                    <div class="dropdown">
+                        <a asp-controller="Movie" asp-action="Index">Phim Đang Chiếu</a>
+                        <a asp-controller="Movie" asp-action="Index" asp-route-tab="upcoming">Phim Sắp Chiếu</a>
+                    </div>
+                </div>
+                <a asp-controller="Cinema" asp-action="Index" class="nav-item">RẠP CGV</a>
+                <a asp-controller="Account" asp-action="Register" class="nav-item">THÀNH VIÊN</a>
+                <a asp-controller="Home" asp-action="News" class="nav-item">TIN MỚI</a>
+            </nav>
+            
+            <a asp-controller="Movie" asp-action="Index" class="btn-buy">MUA VÉ NGAY</a>
+        </div>
+    </header>
+    
+    <!-- Quick Links -->
+    <div class="quick-links">
+        <div class="quick-links-inner">
+            <a asp-controller="Cinema" asp-action="Index" class="ql-item">
+                <div class="ql-icon">🎬</div>
+                <span class="ql-top">CGV CINEMAS</span>
+                <span class="ql-bottom">RẠP CGV</span>
+            </a>
+            <a asp-controller="Movie" asp-action="Index" class="ql-item">
+                <div class="ql-icon">🎞️</div>
+                <span class="ql-top">NOW SHOWING</span>
+                <span class="ql-bottom">PHIM ĐANG CHIẾU</span>
+            </a>
+            <a asp-controller="Home" asp-action="Lamour" class="ql-item">
+                <div class="ql-icon">🌹</div>
+                <span class="ql-top">L'AMOUR</span>
+                <span class="ql-bottom">ĐẶC TRƯNG CGV</span>
+            </a>
+            <a asp-controller="Home" asp-action="Rental" class="ql-item">
+                <div class="ql-icon">🏛️</div>
+                <span class="ql-top">HALL RENTAL & GROUP SALE</span>
+                <span class="ql-bottom">THUÊ RẠP & VÉ NHÓM</span>
+            </a>
+            <a asp-controller="Home" asp-action="Contact" class="ql-item">
+                <div class="ql-icon">📞</div>
+                <span class="ql-top">CONTACT CGV</span>
+                <span class="ql-bottom">LIÊN HỆ CGV</span>
+            </a>
+            <a asp-controller="Home" asp-action="News" class="ql-item">
+                <div class="ql-icon">📰</div>
+                <span class="ql-top">NEWS & OFFERS</span>
+                <span class="ql-bottom">TIN MỚI & ƯU ĐÃI</span>
+            </a>
+            <a asp-controller="Account" asp-action="Register" class="ql-item">
+                <div class="ql-icon">📝</div>
+                <span class="ql-top">REGISTER NOW</span>
+                <span class="ql-bottom">ĐĂNG KÝ NGAY</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    @RenderBody()
+
+    <!-- Footer -->
+    <footer>
+        <div class="brand-strip">
+            <span>4DX</span><span>IMAX</span><span>STARIUM</span><span>GOLD CLASS</span><span>L'AMOUR</span><span>SWEETBOX</span><span>PREMIUM CINEMA</span><span>SCREENX</span>
+        </div>
+        
+        <div class="footer-inner">
+            <div class="footer-grid">
+                <div class="footer-col">
+                    <h4>CGV Việt Nam</h4>
+                    <ul>
+                        <li><a asp-controller="Home" asp-action="Contact">Giới Thiệu</a></li>
+                        <li><a href="#">Tiện Ích Online</a></li>
+                        <li><a href="#">Thẻ Quà Tặng</a></li>
+                        <li><a href="#">Tuyển Dụng</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Điều khoản sử dụng</h4>
+                    <ul>
+                        <li><a href="#">Điều Khoản Chung</a></li>
+                        <li><a href="#">Chính Sách Thanh Toán</a></li>
+                        <li><a href="#">Chính Sách Bảo Mật</a></li>
+                        <li><a href="#">Câu Hỏi Thường Gặp</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Kết nối với chúng tôi</h4>
+                    <div class="social-icons">
+                        <a href="https://facebook.com/cgvcinemavietnam" target="_blank" style="background: #1877f2;">f</a>
+                        <a href="https://youtube.com/cgvvietnam" target="_blank" style="background: #ff0000;">▶</a>
+                        <a href="https://instagram.com/cgvcinemasvietnam" target="_blank" style="background: #e1306c;">📷</a>
+                        <a href="#" style="background: #008fe8;">z</a>
+                    </div>
+                    <div style="border: 2px solid #222; padding: 5px 10px; font-size: 0.6rem; font-weight: 700; text-align: center; display: inline-block;">
+                        <div>ĐÃ THÔNG BÁO</div>
+                        <div>BỘ CÔNG THƯƠNG</div>
+                    </div>
+                </div>
+                <div class="footer-col">
+                    <h4>Chăm sóc khách hàng</h4>
+                    <p style="font-size: 0.72rem; color: #555; margin-bottom: 6px;">Hotline: <strong>1900 6017</strong></p>
+                    <p style="font-size: 0.72rem; color: #555; margin-bottom: 6px;">Giờ làm việc: 8:00 – 22:00 (Kể cả Lễ Tết)</p>
+                    <p style="font-size: 0.72rem; color: #555;">Email: <a href="mailto:hoidap@cgv.vn" style="color: #e30613;">hoidap@cgv.vn</a></p>
+                </div>
+            </div>
+            
+            <div class="legal">
+                <div style="flex-shrink: 0; display: flex; align-items: center; gap: 4px;">
+                    <span style="font-size: 0.75rem; font-weight: 700; color: #555;">CJ</span>
+                    <span style="font-family: 'Oswald', sans-serif; font-weight: 700; color: #e30613; font-size: 1.1rem;">CGV</span>
+                </div>
+                <div>
+                    <p style="font-weight: 700; font-size: 0.72rem; color: #333; margin: 0 0 4px;">CÔNG TY TNHH CJ CGV VIỆT NAM</p>
+                    <p style="font-size: 0.65rem; color: #777; line-height: 1.7; margin: 0;">
+                        Giấy Chứng nhận đăng ký kinh doanh: 0303675393 đăng ký lần đầu ngày 31/7/2008<br>
+                        Địa chỉ: Lầu 2, số 7/28, đường Thành Thái, phường Diên Hồng, Quận 10, TP.HCM<br>
+                        COPYRIGHT 2017 CJ CGV VIETNAM CO., LTD. ALL RIGHTS RESERVED
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="brick-strip"></div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/js/models.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
