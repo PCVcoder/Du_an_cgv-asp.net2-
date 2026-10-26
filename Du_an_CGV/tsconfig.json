@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "allowJs": true,
+    "checkJs": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "strict": false,
+    "noEmit": true
+  },
+  "exclude": [
+    "bin",
+    "obj",
+    "node_modules"
+  ]
+}

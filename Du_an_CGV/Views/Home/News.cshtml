@@ -1,5 +1,7 @@
+@model List<Du_an_CGV.Models.NewsOffer>
 @{
-    ViewData["Title"] = "Tin Mới & Ưu Đãi Điện Ảnh";
+    ViewData["Title"] = "Tin Mới & Ưu Đãi Điện Ảnh - CGV";
+    var activeCategory = (string?)ViewBag.ActiveCategory ?? "all";
 }
 
 @section Styles {
@@ -16,10 +18,10 @@
     .filter-tabs { display: flex; justify-content: center; margin: 24px 0 32px; flex-wrap: wrap; }
     .filter-tab {
         padding: 10px 24px; font-weight: 700; font-size: 0.88rem; background: white; color: #333;
-        border: 1px solid #ccc; border-right: none; transition: background 0.15s, color 0.15s; letter-spacing: 0.3px; cursor: pointer;
+        border: 1px solid #ccc; border-right: none; transition: background 0.15s, color 0.15s; letter-spacing: 0.3px; cursor: pointer; text-decoration: none;
     }
     .filter-tab:hover { color: #e30613; }
-    .filter-tab.active { background: #e30613; color: white; border-color: #e30613; }
+    .filter-tab.active { background: #e30613; color: white !important; border-color: #e30613; }
     .filter-tab:first-child { border-radius: 3px 0 0 3px; }
     .filter-tab:last-child { border-radius: 0 3px 3px 0; border-right: 1px solid #ccc; }
 
@@ -57,59 +59,35 @@
     </div>
 
     <div class="filter-tabs">
-        <button class="filter-tab active" type="button">TẤT CẢ</button>
-        <button class="filter-tab" type="button">CGV MEMBERS</button>
-        <button class="filter-tab" type="button">ƯU ĐÃI ĐỐI TÁC</button>
-        <button class="filter-tab" type="button">SỰ KIỆN ĐIỆN ẢNH</button>
+        <a asp-controller="Home" asp-action="News" asp-route-category="all" class="filter-tab @(activeCategory == "all" ? "active" : "")">TẤT CẢ</a>
+        <a asp-controller="Home" asp-action="News" asp-route-category="offers" class="filter-tab @(activeCategory == "offers" ? "active" : "")">ƯU ĐÃI</a>
+        <a asp-controller="Home" asp-action="News" asp-route-category="member" class="filter-tab @(activeCategory == "member" ? "active" : "")">CGV MEMBERS</a>
+        <a asp-controller="Home" asp-action="News" asp-route-category="news" class="filter-tab @(activeCategory == "news" ? "active" : "")">TIN ĐIỆN ẢNH</a>
     </div>
 
     <div class="news-grid">
-        <!-- News Card 1 -->
-        <a href="#" class="news-card">
-            <div class="image-wrap">
-                <img src="https://images.unsplash.com/photo-1608170825938-a8ea0305d46c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400" alt="News 1">
-                <span class="category-badge" style="background: #e30613;">CGV MEMBER</span>
+        @if (Model != null && Model.Any())
+        {
+            @foreach (var item in Model)
+            {
+                <div class="news-card">
+                    <div class="image-wrap">
+                        <img src="@item.ImageUrl" alt="@item.Title" onerror="this.src='https://images.unsplash.com/photo-1568702846914-96b305d2aaeb?w=600'">
+                        <span class="category-badge" style="background: #e30613;">@item.CategoryLabel</span>
+                    </div>
+                    <div class="news-info">
+                        <div class="date">📅 @item.DateRange</div>
+                        <h3 class="news-title">@item.Title</h3>
+                        <p style="font-size: 0.75rem; color: #666; margin: 6px 0 0; line-height: 1.4;">@item.Summary</p>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div style="grid-column: 1 / -1; text-align: center; padding: 40px; background: white; border-radius: 6px;">
+                <p style="color: #666;">Chưa có ưu đãi nào trong danh mục này.</p>
             </div>
-            <div class="news-info">
-                <div class="date">📅 14/10/2026 - 31/10/2026</div>
-                <h3 class="news-title">ĐỒNG GIÁ 79.000Đ DÀNH CHO KHÁCH HÀNG THÀNH VIÊN VÀO MỖI THỨ TƯ HÀNG TUẦN</h3>
-            </div>
-        </a>
-
-        <!-- News Card 2 -->
-        <a href="#" class="news-card">
-            <div class="image-wrap">
-                <img src="https://images.unsplash.com/photo-1485095329183-d0797cdc5676?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400" alt="News 2">
-                <span class="category-badge" style="background: #e65100;">KHUYẾN MÃI</span>
-            </div>
-            <div class="news-info">
-                <div class="date">📅 10/10/2026 - 25/10/2026</div>
-                <h3 class="news-title">ONLINE COMBO SIÊU TIẾT KIỆM - MUA TRƯỚC VÉ & BẮP NƯỚC GIẢM ĐẾN 30%</h3>
-            </div>
-        </a>
-
-        <!-- News Card 3 -->
-        <a href="#" class="news-card">
-            <div class="image-wrap">
-                <img src="https://images.unsplash.com/photo-1688678004647-945d5aaf91c1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400" alt="News 3">
-                <span class="category-badge" style="background: #1565c0;">ĐỐI TÁC</span>
-            </div>
-            <div class="news-info">
-                <div class="date">📅 01/10/2026 - 30/11/2026</div>
-                <h3 class="news-title">GIẢM NGAY 50.000Đ KHI THANH TOÁN VÉ XEM PHIM BẰNG THẺ NGÂN HÀNG HOẶC VÍ ĐIỆN TỬ</h3>
-            </div>
-        </a>
-
-        <!-- News Card 4 -->
-        <a href="#" class="news-card">
-            <div class="image-wrap">
-                <img src="https://images.unsplash.com/photo-1534447677768-be436bb09401?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400" alt="News 4">
-                <span class="category-badge" style="background: #2e7d32;">SỰ KIỆN</span>
-            </div>
-            <div class="news-info">
-                <div class="date">📅 15/10/2026 - 20/10/2026</div>
-                <h3 class="news-title">GẶP GỠ DÀN SAO ĐIỆN ẢNH VÀ GIAO LƯU FAN TẠI CGV LANDMARK 81 CUỐI TUẦN NÀY</h3>
-            </div>
-        </a>
+        }
     </div>
 </main>

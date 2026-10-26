@@ -1,26 +1,40 @@
+@model Du_an_CGV.Models.Movie
 @{
-    ViewData["Title"] = "Đặt Vé Xem Phim - Chọn Ghế";
+    var movie = Model ?? (Du_an_CGV.Models.Movie?)ViewBag.SelectedMovie;
+    var cinema = (Du_an_CGV.Models.Cinema?)ViewBag.SelectedCinema;
+    var showtime = (Du_an_CGV.Models.Showtime?)ViewBag.SelectedShowtime;
+    var movies = (List<Du_an_CGV.Models.Movie>?)ViewBag.Movies ?? new List<Du_an_CGV.Models.Movie>();
+    var cinemas = (List<Du_an_CGV.Models.Cinema>?)ViewBag.Cinemas ?? new List<Du_an_CGV.Models.Cinema>();
+    var showtimes = (List<Du_an_CGV.Models.Showtime>?)ViewBag.Showtimes ?? new List<Du_an_CGV.Models.Showtime>();
+    var occupiedSeats = (List<string>?)ViewBag.OccupiedSeats ?? new List<string>();
+
+    var userFullName = (string?)ViewBag.UserFullName ?? "";
+    var userEmail = (string?)ViewBag.UserEmail ?? "";
+    var userPhone = (string?)ViewBag.UserPhone ?? "";
+
+    ViewData["Title"] = $"Đặt Vé: {movie?.Title ?? "Xem Phim"} - CGV Cinemas";
+    var basePrice = showtime?.Price ?? 110000;
 }
 
 @section Styles {
 <style>
     .btn-time {
         padding: 9px 16px; border: 1px solid #ccc; background: white; color: #333;
-        border-radius: 3px; font-weight: 700; font-size: 0.88rem; transition: 0.2s; cursor: pointer;
+        border-radius: 3px; font-weight: 700; font-size: 0.88rem; transition: 0.2s; cursor: pointer; text-decoration: none; display: inline-block;
     }
     .btn-time:hover { border-color: #e30613; color: #e30613; }
-    .btn-time.active { background: #e30613; color: white; border-color: #e30613; }
+    .btn-time.active { background: #e30613; color: white !important; border-color: #e30613; }
     
     /* Seat Map Styles */
     .seat {
         width: 26px; height: 24px; padding: 0; border: 1px solid #888;
         border-radius: 3px 3px 6px 6px; background: white; color: #333;
         font-size: 0.55rem; font-weight: 700; text-align: center; line-height: 22px; cursor: pointer;
-        transition: transform 0.1s, background 0.15s;
+        transition: transform 0.1s, background 0.15s; user-select: none;
     }
     .seat:hover:not(.occupied) { transform: scale(1.15); border-color: #e30613; }
     .seat.vip { background: #fff0e8; border-color: #d28a67; }
-    .seat.occupied { background: #999; border-color: #aaa; color: white; cursor: not-allowed; opacity: 0.65; }
+    .seat.occupied { background: #999 !important; border-color: #aaa !important; color: white !important; cursor: not-allowed !important; opacity: 0.65; }
     .seat.selected { background: #e30613 !important; border-color: #e30613 !important; color: white !important; }
     
     .seat-row {
@@ -31,48 +45,134 @@
     .seat-block-center { grid-template-columns: repeat(12, 26px); justify-content: center; padding: 2px 5px; }
     .seat-block-center.vip-zone { border-left: 1px dashed #d26b54; border-right: 1px dashed #d26b54; }
     .seat-block-right { grid-template-columns: repeat(3, 26px); }
+
+    .modal-overlay {
+        display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 1000; align-items: center; justify-content: center; padding: 16px;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-box {
+        background: white; border-radius: 8px; width: 100%; max-width: 500px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 0.82rem; font-weight: 700; margin-bottom: 4px; color: #222; }
+    .form-control {
+        width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.88rem; outline: none;
+    }
+    .form-control:focus { border-color: #e30613; }
+    
+    /* QR Payment Modal Styles */
+    @@keyframes qrScan {
+        0% { top: 14px; opacity: 0.8; }
+        50% { top: 190px; opacity: 1; }
+        100% { top: 14px; opacity: 0.8; }
+    }
+    @@keyframes popCheck {
+        0% { transform: scale(0.4); opacity: 0; }
+        70% { transform: scale(1.2); }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    #qr-clickable-area:hover {
+        transform: scale(1.02);
+        box-shadow: 0 6px 24px rgba(227, 6, 19, 0.22);
+    }
 </style>
 }
 
-<main style="max-width: 960px; margin: 0 auto; padding: 28px 16px 56px;">
+<main style="max-width: 980px; margin: 0 auto; padding: 28px 16px 56px;">
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div style="background: #ffebee; color: #c62828; padding: 12px 16px; border-radius: 4px; margin-bottom: 16px; font-weight: 600;">
+            ⚠️ @TempData["ErrorMessage"]
+        </div>
+    }
+
     <a asp-controller="Movie" asp-action="Index" style="display: inline-block; color: #e30613; font-size: 0.82rem; font-weight: 700; margin-bottom: 18px;">← Quay lại danh sách phim</a>
     
     <div style="display: grid; grid-template-columns: 240px 1fr; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
         
         <!-- Movie Info Left -->
         <div style="background: #1f1f1f; padding: 24px; color: white; display: flex; flex-direction: column;">
-            <img src="https://images.unsplash.com/photo-1568038479111-87bf80659645?w=400" alt="Lật Mặt 7: Một Điều Ước" style="width: 100%; height: 300px; object-fit: cover; border-radius: 4px; box-shadow: 0 2px 10px rgba(0,0,0,0.5);" />
-            <h2 style="font-family: 'Montserrat', 'Roboto', sans-serif; font-size: 1.15rem; font-weight: 800; line-height: 1.4; margin: 16px 0 6px;">Lật Mặt 7: Một Điều Ước</h2>
-            <p style="color: #bbb; font-size: 0.78rem; margin: 0 0 16px;">121 phút · T16 · 2D Phụ Đề</p>
+            <img src="@(movie?.PosterUrl ?? "https://images.unsplash.com/photo-1568038479111-87bf80659645?w=400")" alt="@(movie?.Title ?? "Phim")" style="width: 100%; height: 280px; object-fit: cover; border-radius: 4px; box-shadow: 0 2px 10px rgba(0,0,0,0.5);" onerror="this.src='https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400'" />
+            
+            <h2 style="font-family: 'Montserrat', 'Roboto', sans-serif; font-size: 1.15rem; font-weight: 800; line-height: 1.4; margin: 16px 0 6px;">
+                @(movie?.Title ?? "Chọn phim xem")
+            </h2>
+            <p style="color: #bbb; font-size: 0.78rem; margin: 0 0 16px;">
+                @(movie?.Duration ?? 120) phút · @(movie?.Rating ?? "T16") · @(showtime?.Format ?? "2D Phụ Đề")
+            </p>
 
             <div style="border-top: 1px solid #333; padding-top: 14px; margin-top: auto; font-size: 0.78rem; color: #aaa;">
-                <p style="margin: 0 0 4px;">Rạp: <strong style="color: white;">CGV Landmark 81</strong></p>
-                <p style="margin: 0 0 4px;">Phòng chiếu: <strong style="color: white;">Cinema 03 (IMAX)</strong></p>
-                <p style="margin: 0;">Suất: <strong style="color: #e30613;">19:20 - Hôm nay</strong></p>
+                <p style="margin: 0 0 4px;">Rạp: <strong style="color: white;">@(cinema?.Name ?? "CGV Landmark 81")</strong></p>
+                <p style="margin: 0 0 4px;">Phòng chiếu: <strong style="color: white;">@(showtime?.CinemaHall?.Name ?? "Cinema 01")</strong></p>
+                <p style="margin: 0 0 4px;">Suất: <strong style="color: #e30613;">@(showtime != null ? showtime.StartTime.ToString("HH:mm - dd/MM/yyyy") : "Chưa có suất")</strong></p>
+                <p style="margin: 0;">Giá cơ bản: <strong style="color: #4caf50;">@basePrice.ToString("N0") VNĐ</strong></p>
             </div>
         </div>
 
         <!-- Booking Section Right -->
         <div style="padding: 32px 36px;">
             <p style="color: #e30613; font-size: 0.78rem; font-weight: 800; letter-spacing: 1px; margin: 0 0 4px;">ĐẶT VÉ TRỰC TUYẾN</p>
-            <h1 style="font-family: 'Montserrat', 'Roboto', sans-serif; font-size: 1.5rem; font-weight: 800; margin: 0 0 24px; color: #1a1a1a;">CHỌN SUẤT CHIẾU & GHẾ NGỒI</h1>
+            <h1 style="font-family: 'Montserrat', 'Roboto', sans-serif; font-size: 1.45rem; font-weight: 800; margin: 0 0 20px; color: #1a1a1a;">CHỌN SUẤT CHIẾU & GHẾ NGỒI</h1>
 
-            <label style="display: block; font-size: 0.82rem; font-weight: 700; margin-bottom: 8px;">Chọn cụm rạp</label>
-            <select style="width: 100%; padding: 11px 14px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 20px; background: white; font-size: 0.88rem;">
-                <option>CGV Vincom Center Landmark 81</option>
-                <option>CGV Sư Vạn Hạnh</option>
-                <option>CGV Vincom Đồng Khởi</option>
-                <option>CGV Crescent Mall</option>
-                <option>CGV Aeon Tân Phú</option>
-            </select>
+            <!-- Chọn Phim & Cụm rạp -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+                <div>
+                    <label style="display: block; font-size: 0.8rem; font-weight: 700; margin-bottom: 6px;">Chọn phim</label>
+                    <select class="form-control" onchange="window.location.href='@Url.Action("Index", "Booking")?movieId=' + this.value + '&cinemaId=@(cinema?.Id)'">
+                        @foreach (var m in movies)
+                        {
+                            if (m.Id == movie?.Id)
+                            {
+                                <option value="@m.Id" selected>@m.Title</option>
+                            }
+                            else
+                            {
+                                <option value="@m.Id">@m.Title</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.8rem; font-weight: 700; margin-bottom: 6px;">Chọn cụm rạp</label>
+                    <select class="form-control" onchange="window.location.href='@Url.Action("Index", "Booking")?movieId=@(movie?.Id)&cinemaId=' + this.value">
+                        @foreach (var c in cinemas)
+                        {
+                            if (c.Id == cinema?.Id)
+                            {
+                                <option value="@c.Id" selected>@c.Name (@c.City)</option>
+                            }
+                            else
+                            {
+                                <option value="@c.Id">@c.Name (@c.City)</option>
+                            }
+                        }
+                    </select>
+                </div>
+            </div>
 
-            <p style="font-size: 0.82rem; font-weight: 700; margin: 0 0 10px;">Suất chiếu hôm nay</p>
-            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px;">
-                <button type="button" class="btn-time">10:15</button>
-                <button type="button" class="btn-time">13:30</button>
-                <button type="button" class="btn-time">16:45</button>
-                <button type="button" class="btn-time active">19:20</button>
-                <button type="button" class="btn-time">21:50</button>
+            <!-- Suất chiếu -->
+            <p style="font-size: 0.82rem; font-weight: 700; margin: 0 0 10px;">Suất chiếu khả dụng</p>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px;">
+                @if (showtimes.Any())
+                {
+                    @foreach (var st in showtimes)
+                    {
+                        var isSel = (st.Id == showtime?.Id);
+                        <a asp-controller="Booking" asp-action="Index" 
+                           asp-route-movieId="@movie?.Id" 
+                           asp-route-cinemaId="@(st.CinemaHall?.CinemaId ?? cinema?.Id)" 
+                           asp-route-showtimeId="@st.Id" 
+                           class="btn-time @(isSel ? "active" : "")">
+                            @st.StartTime.ToString("HH:mm") (@st.Format)
+                        </a>
+                    }
+                }
+                else
+                {
+                    <div style="background: #fff3e0; border-left: 4px solid #ff9800; padding: 10px 14px; border-radius: 4px; color: #e65100; font-size: 0.85rem; width: 100%;">
+                        ⚠️ Rạp <strong>@(cinema?.Name ?? "này")</strong> hiện chưa có suất chiếu cho phim <strong>@(movie?.Title)</strong>. Vui lòng đổi cụm rạp khác ở ô trên để tiếp tục đặt vé!
+                    </div>
+                }
             </div>
 
             <!-- Seat Map -->
@@ -86,104 +186,54 @@
 
                     <!-- Seats Grid -->
                     <div style="display: grid; gap: 5px;">
-                        <!-- ROW C -->
-                        <div class="seat-row">
-                            <span style="font-size: 0.65rem; font-weight: 700; text-align: center;">C</span>
-                            <div class="seat-block seat-block-left">
-                                <div class="seat" onclick="toggleSeat(this, 'C1')">1</div>
-                                <div class="seat" onclick="toggleSeat(this, 'C2')">2</div>
-                                <div class="seat" onclick="toggleSeat(this, 'C3')">3</div>
-                            </div>
-                            <div class="seat-block seat-block-center">
-                                <div class="seat" onclick="toggleSeat(this, 'C4')">4</div>
-                                <div class="seat occupied">5</div>
-                                <div class="seat occupied">6</div>
-                                <div class="seat" onclick="toggleSeat(this, 'C7')">7</div>
-                                <div class="seat" onclick="toggleSeat(this, 'C8')">8</div>
-                                <div class="seat" onclick="toggleSeat(this, 'C9')">9</div>
-                                <div class="seat" onclick="toggleSeat(this, 'C10')">10</div>
-                                <div class="seat" onclick="toggleSeat(this, 'C11')">11</div>
-                                <div class="seat" onclick="toggleSeat(this, 'C12')">12</div>
-                                <div class="seat" onclick="toggleSeat(this, 'C13')">13</div>
-                                <div class="seat" onclick="toggleSeat(this, 'C14')">14</div>
-                                <div class="seat" onclick="toggleSeat(this, 'C15')">15</div>
-                            </div>
-                            <div class="seat-block seat-block-right">
-                                <div class="seat" onclick="toggleSeat(this, 'C16')">16</div>
-                                <div class="seat" onclick="toggleSeat(this, 'C17')">17</div>
-                                <div class="seat occupied">18</div>
-                            </div>
-                            <span style="font-size: 0.65rem; font-weight: 700; text-align: center;">C</span>
-                        </div>
+                        @foreach (var row in new[] { "A", "B", "C", "D", "E" })
+                        {
+                            var isVipRow = (row == "C" || row == "D");
+                            <div class="seat-row">
+                                <span style="font-size: 0.65rem; font-weight: 700; text-align: center; @(isVipRow ? "color: #d26b54;" : "")">@row</span>
+                                
+                                <!-- Left block (1-3) -->
+                                <div class="seat-block seat-block-left">
+                                    @for (int num = 1; num <= 3; num++)
+                                    {
+                                        var code = $"{row}{num}";
+                                        var isOcc = occupiedSeats.Contains(code);
+                                        <div class="seat @(isOcc ? "occupied" : "")" onclick="toggleSeat(this, '@code', @(isVipRow ? 1 : 0))">@num</div>
+                                    }
+                                </div>
 
-                        <!-- ROW D (VIP) -->
-                        <div class="seat-row">
-                            <span style="font-size: 0.65rem; font-weight: 700; text-align: center; color: #d26b54;">D</span>
-                            <div class="seat-block seat-block-left">
-                                <div class="seat occupied">1</div>
-                                <div class="seat" onclick="toggleSeat(this, 'D2')">2</div>
-                                <div class="seat" onclick="toggleSeat(this, 'D3')">3</div>
-                            </div>
-                            <div class="seat-block seat-block-center vip-zone">
-                                <div class="seat vip" onclick="toggleSeat(this, 'D4')">4</div>
-                                <div class="seat vip" onclick="toggleSeat(this, 'D5')">5</div>
-                                <div class="seat vip" onclick="toggleSeat(this, 'D6')">6</div>
-                                <div class="seat vip" onclick="toggleSeat(this, 'D7')">7</div>
-                                <div class="seat vip occupied">8</div>
-                                <div class="seat vip occupied">9</div>
-                                <div class="seat vip selected" onclick="toggleSeat(this, 'D10')">10</div>
-                                <div class="seat vip selected" onclick="toggleSeat(this, 'D11')">11</div>
-                                <div class="seat vip" onclick="toggleSeat(this, 'D12')">12</div>
-                                <div class="seat vip" onclick="toggleSeat(this, 'D13')">13</div>
-                                <div class="seat vip" onclick="toggleSeat(this, 'D14')">14</div>
-                                <div class="seat vip occupied">15</div>
-                            </div>
-                            <div class="seat-block seat-block-right">
-                                <div class="seat" onclick="toggleSeat(this, 'D16')">16</div>
-                                <div class="seat" onclick="toggleSeat(this, 'D17')">17</div>
-                                <div class="seat" onclick="toggleSeat(this, 'D18')">18</div>
-                            </div>
-                            <span style="font-size: 0.65rem; font-weight: 700; text-align: center; color: #d26b54;">D</span>
-                        </div>
+                                <!-- Center block (4-15) -->
+                                <div class="seat-block seat-block-center @(isVipRow ? "vip-zone" : "")">
+                                    @for (int num = 4; num <= 15; num++)
+                                    {
+                                        var code = $"{row}{num}";
+                                        var isOcc = occupiedSeats.Contains(code);
+                                        <div class="seat @(isVipRow ? "vip" : "") @(isOcc ? "occupied" : "")" onclick="toggleSeat(this, '@code', @(isVipRow ? 1 : 0))">@num</div>
+                                    }
+                                </div>
 
-                        <!-- ROW E (VIP) -->
-                        <div class="seat-row">
-                            <span style="font-size: 0.65rem; font-weight: 700; text-align: center; color: #d26b54;">E</span>
-                            <div class="seat-block seat-block-left">
-                                <div class="seat" onclick="toggleSeat(this, 'E1')">1</div>
-                                <div class="seat" onclick="toggleSeat(this, 'E2')">2</div>
-                                <div class="seat" onclick="toggleSeat(this, 'E3')">3</div>
+                                <!-- Right block (16-18) -->
+                                <div class="seat-block seat-block-right">
+                                    @for (int num = 16; num <= 18; num++)
+                                    {
+                                        var code = $"{row}{num}";
+                                        var isOcc = occupiedSeats.Contains(code);
+                                        <div class="seat @(isOcc ? "occupied" : "")" onclick="toggleSeat(this, '@code', @(isVipRow ? 1 : 0))">@num</div>
+                                    }
+                                </div>
+
+                                <span style="font-size: 0.65rem; font-weight: 700; text-align: center; @(isVipRow ? "color: #d26b54;" : "")">@row</span>
                             </div>
-                            <div class="seat-block seat-block-center vip-zone">
-                                <div class="seat vip occupied">4</div>
-                                <div class="seat vip" onclick="toggleSeat(this, 'E5')">5</div>
-                                <div class="seat vip" onclick="toggleSeat(this, 'E6')">6</div>
-                                <div class="seat vip" onclick="toggleSeat(this, 'E7')">7</div>
-                                <div class="seat vip" onclick="toggleSeat(this, 'E8')">8</div>
-                                <div class="seat vip" onclick="toggleSeat(this, 'E9')">9</div>
-                                <div class="seat vip" onclick="toggleSeat(this, 'E10')">10</div>
-                                <div class="seat vip" onclick="toggleSeat(this, 'E11')">11</div>
-                                <div class="seat vip occupied">12</div>
-                                <div class="seat vip" onclick="toggleSeat(this, 'E13')">13</div>
-                                <div class="seat vip" onclick="toggleSeat(this, 'E14')">14</div>
-                                <div class="seat vip" onclick="toggleSeat(this, 'E15')">15</div>
-                            </div>
-                            <div class="seat-block seat-block-right">
-                                <div class="seat" onclick="toggleSeat(this, 'E16')">16</div>
-                                <div class="seat" onclick="toggleSeat(this, 'E17')">17</div>
-                                <div class="seat occupied">18</div>
-                            </div>
-                            <span style="font-size: 0.65rem; font-weight: 700; text-align: center; color: #d26b54;">E</span>
-                        </div>
+                        }
                     </div>
 
                     <!-- Legend -->
                     <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-top: 18px; padding-top: 12px; border-top: 1px solid #e0d8ca;">
                         <span style="display: flex; align-items: center; gap: 6px; color: #555; font-size: 0.72rem;">
-                            <span style="width: 16px; height: 14px; border: 1px solid #888; border-radius: 2px 2px 4px 4px; background: white;"></span> Ghế thường (90.000đ)
+                            <span style="width: 16px; height: 14px; border: 1px solid #888; border-radius: 2px 2px 4px 4px; background: white;"></span> Ghế thường (@basePrice.ToString("N0")đ)
                         </span>
                         <span style="display: flex; align-items: center; gap: 6px; color: #555; font-size: 0.72rem;">
-                            <span style="width: 16px; height: 14px; border: 1px solid #d28a67; border-radius: 2px 2px 4px 4px; background: #fff0e8;"></span> Ghế VIP (110.000đ)
+                            <span style="width: 16px; height: 14px; border: 1px solid #d28a67; border-radius: 2px 2px 4px 4px; background: #fff0e8;"></span> Ghế VIP (+15.000đ)
                         </span>
                         <span style="display: flex; align-items: center; gap: 6px; color: #555; font-size: 0.72rem;">
                             <span style="width: 16px; height: 14px; border: 1px solid #e30613; border-radius: 2px 2px 4px 4px; background: #e30613;"></span> Đang chọn
@@ -195,14 +245,49 @@
                 </div>
             </div>
 
+            <!-- F&B Selection Section -->
+            @{
+                var bookingFoodItems = (List<Du_an_CGV.Models.FoodItem>?)ViewBag.FoodItems ?? new List<Du_an_CGV.Models.FoodItem>();
+            }
+            @if (bookingFoodItems.Any())
+            {
+                <div style="margin-top: 24px; padding-top: 18px; border-top: 1px dashed #d2c8be;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                        <p style="font-size: 0.88rem; font-weight: 800; margin: 0; color: #111;">
+                            🍿 CHỌN BẮP NƯỚC & COMBO CGV (Ưu đãi trực tuyến)
+                        </p>
+                        <span style="font-size: 0.72rem; color: #e30613; font-weight: 700;">Nhận tại quầy vé CGV</span>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; max-height: 250px; overflow-y: auto; padding-right: 4px;">
+                        @foreach (var f in bookingFoodItems)
+                        {
+                            <div style="display: flex; gap: 10px; align-items: center; background: #fffcf8; border: 1px solid #e8decb; border-radius: 6px; padding: 8px 10px;">
+                                <img src="@f.ImageUrl" style="width: 44px; height: 44px; object-fit: cover; border-radius: 4px; flex-shrink: 0;" alt="@f.Name" onerror="this.src='https://images.unsplash.com/photo-1585647347483-22b66260dfff?w=500'" />
+                                <div style="flex: 1; min-width: 0;">
+                                    <div style="font-size: 0.76rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #111;" title="@f.Name">@f.Name</div>
+                                    <div style="font-size: 0.74rem; font-weight: 800; color: #e30613;">@f.Price.ToString("N0") đ</div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                                    <button type="button" onclick="changeFoodQty(@f.Id, -1, '@Html.Raw(f.Name.Replace("'", "\\'"))', @f.Price)" style="width: 22px; height: 22px; border: 1px solid #ccc; background: white; border-radius: 3px; font-weight: 800; cursor: pointer; padding: 0; line-height: 1;">-</button>
+                                    <span id="food-qty-@f.Id" style="font-size: 0.8rem; font-weight: 700; min-width: 14px; text-align: center;">0</span>
+                                    <button type="button" onclick="changeFoodQty(@f.Id, 1, '@Html.Raw(f.Name.Replace("'", "\\'"))', @f.Price)" style="width: 22px; height: 22px; border: 1px solid #ccc; background: white; border-radius: 3px; font-weight: 800; cursor: pointer; padding: 0; line-height: 1;">+</button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
             <!-- Checkout Section -->
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 24px; padding-top: 18px; border-top: 1px solid #eee;">
                 <div>
-                    <p style="color: #777; font-size: 0.75rem; margin: 0 0 4px;">Ghế đã chọn:</p>
-                    <p id="selected-seats-text" style="font-weight: 800; font-size: 1.1rem; color: #e30613; margin: 0;">D10, D11</p>
-                    <p id="total-price-text" style="color: #555; font-size: 0.82rem; margin: 4px 0 0;">Tổng tiền: <strong>220.000 VNĐ</strong></p>
+                    <p style="color: #777; font-size: 0.75rem; margin: 0 0 4px;">Ghế & Bắp nước:</p>
+                    <p id="selected-seats-text" style="font-weight: 800; font-size: 1.05rem; color: #e30613; margin: 0;">Chưa chọn ghế</p>
+                    <p id="selected-food-text" style="color: #455a64; font-size: 0.78rem; margin: 2px 0 0; display: none;"></p>
+                    <p id="total-price-text" style="color: #555; font-size: 0.85rem; margin: 4px 0 0;">Tổng thanh toán: <strong>0 VNĐ</strong></p>
                 </div>
-                <button type="button" onclick="confirmBooking()" style="min-width: 200px; background: #e30613; color: white; border: none; border-radius: 4px; padding: 14px 20px; font-weight: 800; font-size: 0.95rem; letter-spacing: 0.5px; cursor: pointer; transition: background 0.15s;">
+                <button type="button" onclick="openCheckoutModal()" style="min-width: 200px; background: #e30613; color: white; border: none; border-radius: 4px; padding: 14px 20px; font-weight: 800; font-size: 0.95rem; letter-spacing: 0.5px; cursor: pointer; transition: background 0.15s;">
                     TIẾP TỤC ĐẶT VÉ ›
                 </button>
             </div>
@@ -210,45 +295,347 @@
     </div>
 </main>
 
+<!-- Modal 1: Xác Nhận Thông Tin Đặt Vé -->
+<div class="modal-overlay" id="checkout-modal">
+    <div class="modal-box">
+        <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #e30613;padding-bottom:10px;margin-bottom:16px;">
+            <h3 style="margin:0;font-family:'Montserrat',sans-serif;font-size:1.15rem;font-weight:800;color:#111;">Xác Nhận Đặt Vé & Thanh Toán</h3>
+            <button type="button" onclick="closeCheckoutModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#888;">×</button>
+        </div>
+
+        <form asp-controller="Booking" asp-action="ConfirmBooking" method="post" id="booking-payment-form">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="showtimeId" value="@(showtime?.Id ?? 0)" />
+            <input type="hidden" id="form-seats-list" name="seatsList" value="" />
+            <input type="hidden" id="form-food-summary" name="foodItemsSummary" value="" />
+            <input type="hidden" id="form-food-total" name="foodTotal" value="0" />
+            <input type="hidden" id="form-food-json" name="foodItemsJson" value="" />
+
+            <div style="background:#f5f0e8;border-radius:6px;padding:14px;margin-bottom:16px;font-size:0.85rem;">
+                <p style="margin:0 0 4px;">Phim: <strong>@(movie?.Title)</strong></p>
+                <p style="margin:0 0 4px;">Rạp: <strong>@(cinema?.Name) - @(showtime?.CinemaHall?.Name)</strong></p>
+                <p style="margin:0 0 4px;">Suất: <strong style="color:#e30613;">@(showtime?.StartTime.ToString("HH:mm - dd/MM/yyyy"))</strong></p>
+                <p style="margin:0 0 4px;">Ghế đã chọn: <strong id="modal-seats-text" style="color:#e30613;"></strong></p>
+                <p id="modal-food-row" style="margin:0 0 4px; display: none;">Bắp nước kèm: <strong id="modal-food-text" style="color:#e65100;"></strong></p>
+                <p style="margin:0;">Tổng thanh toán: <strong id="modal-price-text" style="color:#2e7d32;font-size:1.1rem;"></strong></p>
+            </div>
+
+            <div class="form-group">
+                <label>Họ và tên người nhận vé *</label>
+                <input type="text" name="customerName" id="input-customer-name" class="form-control" value="@userFullName" placeholder="Nhập họ và tên" required />
+            </div>
+
+            <div class="form-group">
+                <label>Số điện thoại *</label>
+                <input type="tel" name="customerPhone" id="input-customer-phone" class="form-control" value="@userPhone" placeholder="Nhập số điện thoại nhận mã vé" required />
+            </div>
+
+            <div class="form-group">
+                <label>Email *</label>
+                <input type="email" name="customerEmail" id="input-customer-email" class="form-control" value="@userEmail" placeholder="Nhập email nhận vé điện tử" required />
+            </div>
+
+            <div class="form-group">
+                <label>Phương thức thanh toán *</label>
+                <select name="paymentMethod" id="input-payment-method" class="form-control">
+                    <option value="VNPAY-QR">VNPAY-QR (Mã QR ngân hàng & ví điện tử)</option>
+                    <option value="MoMo">Ví điện tử MoMo (Quét QR MoMo)</option>
+                    <option value="ZaloPay">Ví điện tử ZaloPay (Quét QR ZaloPay)</option>
+                    <option value="VietQR">Chuyển khoản nhanh VietQR 24/7</option>
+                </select>
+            </div>
+
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+                <button type="button" onclick="closeCheckoutModal()" style="background:#888;color:white;border:none;padding:10px 18px;border-radius:4px;cursor:pointer;font-weight:700;">Hủy</button>
+                <button type="button" onclick="proceedToQrPayment()" style="background:#e30613;color:white;border:none;padding:11px 22px;border-radius:4px;cursor:pointer;font-weight:800;display:flex;align-items:center;gap:6px;">
+                    <span>📲</span> TIẾP TỤC THANH TOÁN (MÃ QR) ›
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal 2: Bảng QR Code Thanh Toán -->
+<div class="modal-overlay" id="qr-payment-modal" style="z-index: 1050;">
+    <div class="modal-box" style="max-width: 460px; text-align: center; border-top: 4px solid #e30613;">
+        <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eee;padding-bottom:10px;margin-bottom:14px;">
+            <h3 style="margin:0;font-family:'Montserrat',sans-serif;font-size:1.15rem;font-weight:800;color:#e30613;display:flex;align-items:center;gap:6px;">
+                <span>📲</span> QUÉT MÃ QR THANH TOÁN
+            </h3>
+            <button type="button" onclick="closeQrPaymentModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#888;">×</button>
+        </div>
+
+        <div style="background:#fcf9f4;border:1px solid #ebd8c8;border-radius:6px;padding:12px;margin-bottom:14px;text-align:left;font-size:0.83rem;line-height:1.5;">
+            <div>Phim: <strong>@(movie?.Title)</strong></div>
+            <div>Rạp: <strong>@(cinema?.Name) - @(showtime?.CinemaHall?.Name)</strong></div>
+            <div>Ghế: <strong id="qr-seats-text" style="color:#e30613;"></strong></div>
+            <div>Cổng thanh toán: <strong id="qr-method-text" style="color:#0288d1;">VNPAY-QR</strong></div>
+            <div style="margin-top:4px;font-size:0.95rem;">Số tiền thanh toán: <strong id="qr-price-text" style="color:#2e7d32;font-size:1.18rem;"></strong></div>
+        </div>
+
+        <!-- Khung QR Code Tương Tác (Nhấn vào mới tính là thanh toán) -->
+        <div id="qr-clickable-area" onclick="triggerQrPaidSuccess()" title="Click trực tiếp vào mã QR để xác nhận thanh toán" style="cursor: pointer; display: inline-block; background: white; padding: 14px; border-radius: 12px; border: 2px dashed #e30613; box-shadow: 0 4px 18px rgba(227,6,19,0.12); transition: all 0.25s ease; position: relative;">
+            <div id="qr-scanner-line" style="position: absolute; left: 14px; right: 14px; top: 14px; height: 3px; background: linear-gradient(90deg, transparent, #e30613, transparent); border-radius: 2px; animation: qrScan 2s infinite ease-in-out;"></div>
+            
+            <img id="qr-image" src="" alt="Mã QR Thanh Toán" style="width: 210px; height: 210px; display: block; margin: 0 auto; border-radius: 4px;" />
+
+            <!-- Lớp phủ khi nhấn thanh toán thành công -->
+            <div id="qr-success-overlay" style="display:none; position:absolute; inset:0; background:rgba(255,255,255,0.96); border-radius:10px; flex-direction:column; align-items:center; justify-content:center; gap:8px;">
+                <div style="font-size:3.5rem; color:#2e7d32; animation: popCheck 0.4s ease;">✅</div>
+                <div style="font-weight:800; color:#2e7d32; font-size:1rem;">ĐÃ THANH TOÁN THÀNH CÔNG!</div>
+                <div style="font-size:0.8rem; color:#666;">Đang ghi nhận đơn vé...</div>
+            </div>
+        </div>
+
+        <div style="margin-top: 12px;">
+            <p style="font-size: 0.9rem; font-weight: 800; color: #e30613; margin: 0 0 3px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                <span>👆</span> BẤM TRỰC TIẾP VÀO MÃ QR ĐỂ THANH TOÁN
+            </p>
+            <p style="font-size: 0.76rem; color: #666; margin: 0 0 14px;">
+                (Nhấn vào QR để hệ thống xác nhận hoàn tất thanh toán)
+            </p>
+        </div>
+
+        <div style="display:flex;gap:10px;justify-content:center;border-top:1px solid #eee;padding-top:12px;">
+            <button type="button" onclick="closeQrPaymentModal()" style="background:#eee;color:#333;border:1px solid #ccc;padding:9px 15px;border-radius:4px;cursor:pointer;font-weight:700;font-size:0.82rem;">← Quay lại</button>
+            <button type="button" onclick="triggerQrPaidSuccess()" style="background:#2e7d32;color:white;border:none;padding:9px 18px;border-radius:4px;cursor:pointer;font-weight:800;font-size:0.84rem;display:flex;align-items:center;gap:6px;">
+                <span>✔</span> Đã Quét Mã & Thanh Toán
+            </button>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
 <script>
-    let selectedSeats = ['D10', 'D11'];
+    // @@ts-nocheck
+    const basePrice = @basePrice;
+    let selectedSeats = [];
+    let selectedFoods = {}; // { [id]: { name, price, qty } }
+
+    function changeFoodQty(id, delta, name, price) {
+        if (!selectedFoods[id]) {
+            selectedFoods[id] = { name, price, qty: 0 };
+        }
+        selectedFoods[id].qty += delta;
+        if (selectedFoods[id].qty < 0) selectedFoods[id].qty = 0;
+
+        const qtyElem = document.getElementById('food-qty-' + id);
+        if (qtyElem) qtyElem.textContent = selectedFoods[id].qty;
+
+        updateSummary();
+    }
     
-    function toggleSeat(elem, seatCode) {
-        if (elem.classList.contains('occupied')) return;
+    function toggleSeat(elem, seatCode, isVip) {
+        if (!elem || elem.classList.contains('occupied')) return;
         
-        if (elem.classList.contains('selected')) {
+        const existingIdx = selectedSeats.findIndex(s => s.code === seatCode);
+        if (existingIdx >= 0) {
             elem.classList.remove('selected');
-            selectedSeats = selectedSeats.filter(s => s !== seatCode);
+            selectedSeats.splice(existingIdx, 1);
         } else {
             elem.classList.add('selected');
-            selectedSeats.push(seatCode);
+            selectedSeats.push({ code: seatCode, isVip: isVip === 1 });
         }
         
         updateSummary();
     }
+
+    function calculateTotals() {
+        let seatTotal = 0;
+        selectedSeats.forEach(s => {
+            seatTotal += basePrice + (s.isVip ? 15000 : 0);
+        });
+
+        let foodTotal = 0;
+        let foodSummaryParts = [];
+        for (const id in selectedFoods) {
+            if (selectedFoods[id].qty > 0) {
+                foodTotal += selectedFoods[id].price * selectedFoods[id].qty;
+                foodSummaryParts.push(`${selectedFoods[id].qty}x ${selectedFoods[id].name}`);
+            }
+        }
+
+        return {
+            seatTotal,
+            foodTotal,
+            grandTotal: seatTotal + foodTotal,
+            foodSummary: foodSummaryParts.join(', ')
+        };
+    }
     
     function updateSummary() {
         const textElem = document.getElementById('selected-seats-text');
+        const foodTextElem = document.getElementById('selected-food-text');
         const priceElem = document.getElementById('total-price-text');
         
+        const { seatTotal, foodTotal, grandTotal, foodSummary } = calculateTotals();
+
         if (selectedSeats.length === 0) {
-            textElem.textContent = 'Chưa chọn ghế';
-            priceElem.innerHTML = 'Tổng tiền: <strong>0 VNĐ</strong>';
+            if (textElem) textElem.textContent = 'Chưa chọn ghế';
         } else {
-            textElem.textContent = selectedSeats.join(', ');
-            const total = selectedSeats.length * 110000;
-            priceElem.innerHTML = 'Tổng tiền: <strong>' + total.toLocaleString('vi-VN') + ' VNĐ</strong>';
+            const seatNames = selectedSeats.map(s => s.code).join(', ');
+            if (textElem) textElem.textContent = `${seatNames} (${selectedSeats.length} vé)`;
+        }
+
+        if (foodSummary) {
+            if (foodTextElem) {
+                foodTextElem.style.display = 'block';
+                foodTextElem.innerHTML = `🍿 Bắp nước: <strong>${foodSummary}</strong> (+${foodTotal.toLocaleString('vi-VN')} đ)`;
+            }
+        } else {
+            if (foodTextElem) foodTextElem.style.display = 'none';
+        }
+
+        if (priceElem) {
+            priceElem.innerHTML = 'Tổng thanh toán: <strong>' + grandTotal.toLocaleString('vi-VN') + ' VNĐ</strong>';
         }
     }
     
-    function confirmBooking() {
-        if (selectedSeats.length === 0) {
-            alert('Vui lòng chọn ít nhất 1 ghế để tiếp tục!');
+    function openCheckoutModal() {
+        const showtimeInput = document.querySelector('input[name="showtimeId"]');
+        const showtimeVal = showtimeInput ? parseInt(showtimeInput.value) : 0;
+        if (!showtimeVal || showtimeVal <= 0) {
+            alert('Cụm rạp này hiện chưa có suất chiếu khả dụng cho phim đã chọn. Vui lòng chọn một cụm rạp khác hoặc phim khác có suất chiếu!');
             return;
         }
-        alert('Đặt vé thành công cho các ghế: ' + selectedSeats.join(', ') + '!\nĐang chuyển tới trang Vé của tôi...');
-        window.location.href = '@Url.Action("MyTickets", "Booking")';
+
+        if (selectedSeats.length === 0) {
+            alert('Vui lòng chọn ít nhất 1 ghế để tiếp tục đặt vé!');
+            return;
+        }
+        
+        const seatNames = selectedSeats.map(s => s.code).join(', ');
+        const { foodTotal, grandTotal, foodSummary } = calculateTotals();
+
+        const formSeats = document.getElementById('form-seats-list');
+        const formFoodSummary = document.getElementById('form-food-summary');
+        const formFoodTotal = document.getElementById('form-food-total');
+        const formFoodJson = document.getElementById('form-food-json');
+
+        const modalSeats = document.getElementById('modal-seats-text');
+        const modalFoodRow = document.getElementById('modal-food-row');
+        const modalFoodText = document.getElementById('modal-food-text');
+        const modalPrice = document.getElementById('modal-price-text');
+        const checkoutModal = document.getElementById('checkout-modal');
+
+        if (formSeats) formSeats.value = seatNames;
+        if (formFoodSummary) formFoodSummary.value = foodSummary;
+        if (formFoodTotal) formFoodTotal.value = foodTotal;
+
+        const foodOrderList = [];
+        for (const id in selectedFoods) {
+            if (selectedFoods[id].qty > 0) {
+                foodOrderList.push({
+                    foodItemId: parseInt(id),
+                    quantity: selectedFoods[id].qty,
+                    unitPrice: selectedFoods[id].price
+                });
+            }
+        }
+        if (formFoodJson) formFoodJson.value = JSON.stringify(foodOrderList);
+
+
+        if (modalSeats) modalSeats.textContent = `${seatNames} (${selectedSeats.length} ghế)`;
+
+        if (foodSummary) {
+            if (modalFoodRow) modalFoodRow.style.display = 'block';
+            if (modalFoodText) modalFoodText.textContent = `${foodSummary} (+${foodTotal.toLocaleString('vi-VN')} đ)`;
+        } else {
+            if (modalFoodRow) modalFoodRow.style.display = 'none';
+        }
+
+        if (modalPrice) modalPrice.textContent = grandTotal.toLocaleString('vi-VN') + ' VNĐ';
+
+        if (checkoutModal) checkoutModal.classList.add('active');
+    }
+
+    function closeCheckoutModal() {
+        const checkoutModal = document.getElementById('checkout-modal');
+        if (checkoutModal) checkoutModal.classList.remove('active');
+    }
+
+    function proceedToQrPayment() {
+        const nameInput = document.getElementById('input-customer-name');
+        const phoneInput = document.getElementById('input-customer-phone');
+        const emailInput = document.getElementById('input-customer-email');
+        const methodInput = document.getElementById('input-payment-method');
+
+        if (!nameInput || !nameInput.value.trim()) {
+            alert('Vui lòng nhập họ và tên người nhận vé!');
+            if (nameInput) nameInput.focus();
+            return;
+        }
+        if (!phoneInput || !phoneInput.value.trim()) {
+            alert('Vui lòng nhập số điện thoại nhận vé!');
+            if (phoneInput) phoneInput.focus();
+            return;
+        }
+        if (!emailInput || !emailInput.value.trim()) {
+            alert('Vui lòng nhập địa chỉ email nhận vé!');
+            if (emailInput) emailInput.focus();
+            return;
+        }
+
+        const seatNames = selectedSeats.map(s => s.code).join(', ');
+        const { grandTotal } = calculateTotals();
+        const paymentMethod = methodInput ? methodInput.value : 'VNPAY-QR';
+
+        const qrSeats = document.getElementById('qr-seats-text');
+        const qrPrice = document.getElementById('qr-price-text');
+        const qrMethod = document.getElementById('qr-method-text');
+        const qrImage = document.getElementById('qr-image');
+
+        if (qrSeats) qrSeats.textContent = `${seatNames} (${selectedSeats.length} vé)`;
+        if (qrPrice) qrPrice.textContent = grandTotal.toLocaleString('vi-VN') + ' VNĐ';
+        if (qrMethod) qrMethod.textContent = paymentMethod;
+
+        // Sinh mã QR thanh toán động mô phỏng giao dịch thực tế
+        const qrContent = encodeURIComponent(`CGV|VE-PHIM|${grandTotal}|${seatNames}|${nameInput.value.trim()}|${paymentMethod}`);
+        if (qrImage) {
+            qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${qrContent}&margin=8`;
+        }
+
+        // Đặt lại trạng thái overlay thành công nếu có
+        const successOverlay = document.getElementById('qr-success-overlay');
+        const scannerLine = document.getElementById('qr-scanner-line');
+        if (successOverlay) successOverlay.style.display = 'none';
+        if (scannerLine) scannerLine.style.display = 'block';
+        isPaying = false;
+
+        // Đóng modal thông tin, mở modal QR
+        closeCheckoutModal();
+        const qrModal = document.getElementById('qr-payment-modal');
+        if (qrModal) qrModal.classList.add('active');
+    }
+
+    function closeQrPaymentModal() {
+        const qrModal = document.getElementById('qr-payment-modal');
+        if (qrModal) qrModal.classList.remove('active');
+        // Mở lại modal checkout để người dùng có thể chỉnh sửa nếu cần
+        const checkoutModal = document.getElementById('checkout-modal');
+        if (checkoutModal) checkoutModal.classList.add('active');
+    }
+
+    let isPaying = false;
+    function triggerQrPaidSuccess() {
+        if (isPaying) return;
+        isPaying = true;
+
+        // Hiển thị hiệu ứng thành công ngay trên mã QR
+        const successOverlay = document.getElementById('qr-success-overlay');
+        const scannerLine = document.getElementById('qr-scanner-line');
+        if (scannerLine) scannerLine.style.display = 'none';
+        if (successOverlay) {
+            successOverlay.style.display = 'flex';
+        }
+
+        // Đợi 800ms cho người dùng nhìn thấy xác nhận rồi tự động submit form thanh toán
+        setTimeout(function () {
+            const form = document.getElementById('booking-payment-form');
+            if (form) {
+                form.submit();
+            }
+        }, 850);
     }
 </script>
 }

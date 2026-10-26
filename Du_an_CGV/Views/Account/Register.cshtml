@@ -1,5 +1,8 @@
+@model Du_an_CGV.Models.ViewModels.LoginViewModel
 @{
     ViewData["Title"] = "Đăng Ký / Đăng Nhập Thành Viên CGV";
+    var activeTab = (string?)ViewBag.ActiveTab ?? "register";
+    var returnUrl = (string?)ViewBag.ReturnUrl;
 }
 
 @section Styles {
@@ -36,195 +39,196 @@
     .btn-submit:hover { background: #c00; }
     
     /* Right sidebar */
-    .sidebar { position: sticky; top: 20px; }
-    .benefit-box { background: white; border-radius: 6px; padding: 32px 24px 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); text-align: center; }
-    .benefit-title { font-family: 'Montserrat', 'Roboto', sans-serif; font-weight: 800; font-size: 1.15rem; color: #111; margin: 0 0 10px; letter-spacing: 0.5px; }
+    .sidebar { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 20px; }
     
-    .tier-box { margin-top: 20px; background: white; border-radius: 6px; padding: 20px 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+    .test-box {
+        background: white; border-radius: 6px; padding: 20px 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    }
+    .test-title {
+        font-family: 'Montserrat', 'Roboto', sans-serif; font-weight: 800; font-size: 0.95rem; color: #111; margin: 0 0 14px; letter-spacing: 0.5px;
+    }
+    .test-row {
+        font-size: 0.84rem; line-height: 1.6; color: #333; margin-bottom: 12px;
+    }
+    .test-row:last-child { margin-bottom: 0; }
+    .test-row strong { color: #111; }
+
+    .benefit-box { background: white; border-radius: 6px; padding: 24px 20px 18px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); text-align: center; }
+    .benefit-title { font-family: 'Montserrat', 'Roboto', sans-serif; font-weight: 800; font-size: 1.05rem; color: #111; margin: 0 0 8px; letter-spacing: 0.5px; }
+    
+    .tier-box { background: white; border-radius: 6px; padding: 20px 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
     .tier-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
     .tier-dot { width: 12px; height: 12px; border-radius: 50%; }
+
+    .validation-summary-errors {
+        background: #ffebee; border-left: 4px solid #e30613; padding: 10px 14px; border-radius: 4px; color: #b71c1c; font-size: 0.85rem; margin-bottom: 12px;
+    }
+    .validation-summary-errors ul { margin: 0; padding-left: 18px; }
 </style>
 }
 
 <div class="container">
     <!-- LEFT: Form Box -->
     <div class="form-box">
+        @if (TempData["WarningMessage"] != null)
+        {
+            <div style="background: #fff3cd; color: #856404; border-bottom: 2px solid #ffeeba; padding: 12px 18px; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                <span>⚠️</span> @TempData["WarningMessage"]
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(returnUrl) && returnUrl.Contains("Booking", StringComparison.OrdinalIgnoreCase))
+        {
+            <div style="background: #fff3cd; color: #856404; border-bottom: 2px solid #ffeeba; padding: 12px 18px; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                <span>🎟️</span> Vui lòng đăng nhập tài khoản thành viên để tiếp tục mua vé & đặt vé xem phim!
+            </div>
+        }
         <div class="tabs">
-            <button type="button" class="tab" id="tab-login" onclick="switchAuthTab('login')">ĐĂNG NHẬP</button>
-            <button type="button" class="tab active" id="tab-register" onclick="switchAuthTab('register')">ĐĂNG KÝ</button>
+            <button type="button" class="tab @(activeTab == "login" ? "active" : "")" id="tab-login" onclick="switchAuthTab('login')">ĐĂNG NHẬP</button>
+            <button type="button" class="tab @(activeTab == "register" ? "active" : "")" id="tab-register" onclick="switchAuthTab('register')">ĐĂNG KÝ</button>
         </div>
         
-        <!-- REGISTER FORM -->
-        <div class="form-content" id="register-form">
-            <div class="input-group">
-                <label>Họ và tên<span class="req">*</span></label>
-                <input type="text" class="form-control" placeholder="Nhập họ và tên đầy đủ" required>
-            </div>
-            
-            <div class="input-group">
-                <label>Số điện thoại<span class="req">*</span></label>
-                <input type="tel" class="form-control" placeholder="Nhập số điện thoại di động" required>
-            </div>
-            
-            <div class="input-group">
-                <label>Email<span class="req">*</span></label>
-                <input type="email" class="form-control" placeholder="Nhập địa chỉ email" required>
-            </div>
-            
-            <div class="input-group">
-                <label>Mật khẩu<span class="req">*</span></label>
-                <input type="password" class="form-control" placeholder="Tối thiểu 6 ký tự" required>
-            </div>
-            
-            <div class="input-group">
-                <label>Ngày sinh<span class="req">*</span></label>
-                <div style="display: flex; gap: 8px;">
-                    <select class="form-control" style="flex: 1;" id="dob-day">
-                        <option value="">Ngày</option>
-                    </select>
-                    <select class="form-control" style="flex: 1;" id="dob-month">
-                        <option value="">Tháng</option>
-                    </select>
-                    <select class="form-control" style="flex: 1;" id="dob-year">
-                        <option value="">Năm</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="input-group">
-                <label>Khu vực<span class="req">*</span></label>
-                <select class="form-control">
-                    <option>Hồ Chí Minh</option>
-                    <option>Hà Nội</option>
-                    <option>Đà Nẵng</option>
-                    <option>Cần Thơ</option>
-                    <option>Hải Phòng</option>
-                    <option>Bình Dương</option>
-                    <option>Đồng Nai</option>
-                    <option>Khánh Hòa / Nha Trang</option>
-                </select>
-            </div>
-            
-            <div class="input-group">
-                <label>Rạp CGV yêu thích<span class="req">*</span></label>
-                <select class="form-control">
-                    <option>CGV Sư Vạn Hạnh</option>
-                    <option>CGV Vincom Đồng Khởi</option>
-                    <option>CGV Landmark 81</option>
-                    <option>CGV Crescent Mall</option>
-                    <option>CGV Hùng Vương Plaza</option>
-                    <option>CGV Vincom Bà Triệu</option>
-                    <option>CGV Aeon Tân Phú</option>
-                    <option>CGV Vincom Đà Nẵng</option>
-                </select>
-            </div>
-
-            <div class="input-group">
-                <label style="display: flex; gap: 10px; align-items: start; font-weight: normal; cursor: pointer;">
-                    <input type="checkbox" style="margin-top: 3px; accent-color: #e30613;" checked>
-                    <span style="font-size: 0.82rem; color: #333; line-height: 1.5;">Bằng việc bấm nút "Đăng Ký" bên dưới, tôi đồng ý với Chính Sách Bảo Mật và Điều Khoản Sử Dụng Của CGV.</span>
-                </label>
-            </div>
-
-            <button type="button" class="btn-submit" onclick="alert('Đăng ký tài khoản CGV thành công! Vui lòng đăng nhập.')">ĐĂNG KÝ THÀNH VIÊN</button>
-        </div>
-
         <!-- LOGIN FORM -->
-        <div class="form-content hidden" id="login-form">
+        <form asp-controller="Account" asp-action="Login" asp-route-returnUrl="@returnUrl" method="post" class="form-content @(activeTab == "login" ? "" : "hidden")" id="login-form">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="All" class="text-danger"></div>
+
             <div class="input-group">
-                <label>Email hoặc Số điện thoại<span class="req">*</span></label>
-                <input type="text" class="form-control" placeholder="Nhập email hoặc số điện thoại" required>
+                <label>Email hoặc Tên đăng nhập<span class="req">*</span></label>
+                <input type="text" name="Email" id="login-email" class="form-control" placeholder="Nhập email hoặc tên tài khoản" required />
             </div>
             
             <div class="input-group">
                 <label>Mật khẩu<span class="req">*</span></label>
-                <input type="password" class="form-control" placeholder="Nhập mật khẩu" required>
+                <input type="password" name="Password" id="login-password" class="form-control" placeholder="Nhập mật khẩu" required />
             </div>
 
             <div class="input-group" style="flex-direction: row; justify-content: space-between; align-items: center; margin-top: -4px;">
                 <label style="display: flex; gap: 8px; align-items: center; font-weight: normal; cursor: pointer; margin: 0;">
-                    <input type="checkbox" style="accent-color: #e30613;" checked>
+                    <input type="checkbox" name="RememberMe" value="true" style="accent-color: #e30613;" />
                     <span style="font-size: 0.82rem; color: #555;">Ghi nhớ đăng nhập</span>
                 </label>
                 <a href="#" style="font-size: 0.82rem; color: #e30613; text-decoration: none; font-weight: 600;">Quên mật khẩu?</a>
             </div>
 
-            <button type="button" class="btn-submit" onclick="window.location.href='@Url.Action("Profile", "Account")'">ĐĂNG NHẬP</button>
-        </div>
+            <button type="submit" class="btn-submit">ĐĂNG NHẬP</button>
+        </form>
+
+        <!-- REGISTER FORM -->
+        <form asp-controller="Account" asp-action="RegisterUser" asp-route-returnUrl="@returnUrl" method="post" class="form-content @(activeTab == "register" ? "" : "hidden")" id="register-form">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="All" class="text-danger"></div>
+
+            <div class="input-group">
+                <label>Họ và tên<span class="req">*</span></label>
+                <input type="text" name="FullName" class="form-control" placeholder="Nhập họ và tên đầy đủ" required />
+            </div>
+            
+            <div class="input-group">
+                <label>Số điện thoại<span class="req">*</span></label>
+                <input type="tel" name="PhoneNumber" class="form-control" placeholder="Nhập số điện thoại di động" required />
+            </div>
+            
+            <div class="input-group">
+                <label>Email<span class="req">*</span></label>
+                <input type="email" name="Email" class="form-control" placeholder="Nhập địa chỉ email" required />
+            </div>
+            
+            <div class="input-group">
+                <label>Mật khẩu<span class="req">*</span></label>
+                <input type="password" name="Password" class="form-control" placeholder="Tối thiểu 6 ký tự" required />
+            </div>
+
+            <div class="input-group">
+                <label>Khu vực<span class="req">*</span></label>
+                <select name="City" class="form-control">
+                    <option value="Hồ Chí Minh">Hồ Chí Minh</option>
+                    <option value="Hà Nội">Hà Nội</option>
+                    <option value="Đà Nẵng">Đà Nẵng</option>
+                    <option value="Cần Thơ">Cần Thơ</option>
+                    <option value="Hải Phòng">Hải Phòng</option>
+                    <option value="Bình Dương">Bình Dương</option>
+                    <option value="Đồng Nai">Đồng Nai</option>
+                </select>
+            </div>
+            
+            <div class="input-group">
+                <label>Rạp CGV yêu thích<span class="req">*</span></label>
+                <select name="FavoriteCinema" class="form-control">
+                    <option value="CGV Landmark 81">CGV Landmark 81</option>
+                    <option value="CGV Sư Vạn Hạnh">CGV Sư Vạn Hạnh</option>
+                    <option value="CGV Vincom Đồng Khởi">CGV Vincom Đồng Khởi</option>
+                    <option value="CGV Crescent Mall">CGV Crescent Mall</option>
+                    <option value="CGV Vincom Bà Triệu">CGV Vincom Bà Triệu</option>
+                    <option value="CGV Vincom Đà Nẵng">CGV Vincom Đà Nẵng</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label style="display: flex; gap: 10px; align-items: start; font-weight: normal; cursor: pointer;">
+                    <input type="checkbox" style="margin-top: 3px; accent-color: #e30613;" checked required />
+                    <span style="font-size: 0.82rem; color: #333; line-height: 1.5;">Bằng việc bấm nút "Đăng Ký", tôi đồng ý với Chính Sách Bảo Mật và Điều Khoản CGV.</span>
+                </label>
+            </div>
+
+            <button type="submit" class="btn-submit">ĐĂNG KÝ THÀNH VIÊN</button>
+        </form>
     </div>
 
     <!-- RIGHT: Sidebar Info -->
     <div class="sidebar">
-        <div class="benefit-box">
-            <div style="font-size: 5rem; margin-bottom: 16px;">🎁</div>
-            <h3 class="benefit-title">QUÀ TẶNG SINH NHẬT</h3>
-            <p style="font-size: 0.85rem; color: #555; line-height: 1.6; margin: 0 0 20px;">Quà tặng vé xem phim & bắp nước đặc quyền dành cho cả 4 cấp độ thành viên trong tháng sinh nhật!</p>
-            
-            <div style="display: flex; justify-content: center; gap: 8px;">
-                <div style="width: 10px; height: 10px; border-radius: 50%; background: #e30613;"></div>
-                <div style="width: 10px; height: 10px; border-radius: 50%; background: #ccc;"></div>
-                <div style="width: 10px; height: 10px; border-radius: 50%; background: #ccc;"></div>
+        <!-- TEST ACCOUNTS INFO -->
+        <div class="test-box">
+            <h4 class="test-title">TÀI KHOẢN TEST HỆ THỐNG</h4>
+            <div class="test-row" style="padding-bottom: 10px; border-bottom: 1px solid #eee;">
+                <div style="font-weight: 700; color: #e30613; margin-bottom: 2px;">• Quản trị viên (Admin):</div>
+                <div>Email: <strong>admin@cgv.vn</strong></div>
+                <div>Mật khẩu: <strong>Admin@123456</strong></div>
+            </div>
+            <div class="test-row" style="padding-top: 2px;">
+                <div style="font-weight: 700; color: #0288d1; margin-bottom: 2px;">• Khách hàng (Customer):</div>
+                <div>Email: <strong>khachhang@cgv.vn</strong></div>
+                <div>Mật khẩu: <strong>Customer@123456</strong></div>
             </div>
         </div>
 
+        <!-- MEMBER GIFT (ĐÃ CHUYỂN XUỐNG DƯỚI) -->
+        <div class="benefit-box">
+            <div style="font-size: 3rem; margin-bottom: 8px;">🎁</div>
+            <h3 class="benefit-title">QUÀ TẶNG THÀNH VIÊN</h3>
+            <p style="font-size: 0.82rem; color: #555; line-height: 1.6; margin: 0 0 14px;">Tích điểm đổi vé & bắp nước miễn phí khi đặt vé trực tuyến trên website CGV.</p>
+        </div>
+
+        <!-- MEMBER TIERS -->
         <div class="tier-box">
-            <h4 style="font-family: 'Montserrat', 'Roboto', sans-serif; font-weight: 800; font-size: 1rem; color: #111; margin: 0 0 14px; letter-spacing: 0.5px;">CẤP ĐỘ THÀNH VIÊN</h4>
+            <h4 style="font-family: 'Montserrat', 'Roboto', sans-serif; font-weight: 800; font-size: 0.95rem; color: #111; margin: 0 0 12px;">CẤP ĐỘ THÀNH VIÊN</h4>
             <div class="tier-row"><div class="tier-dot" style="background: #888;"></div><span style="font-weight: 700; font-size: 0.82rem; color: #888; min-width: 65px;">Standard</span><span style="font-size: 0.78rem; color: #777;">từ 0 điểm</span></div>
-            <div class="tier-row"><div class="tier-dot" style="background: #aaa;"></div><span style="font-weight: 700; font-size: 0.82rem; color: #666; min-width: 65px;">Silver</span><span style="font-size: 0.78rem; color: #777;">từ 500K điểm</span></div>
-            <div class="tier-row"><div class="tier-dot" style="background: #c9a227;"></div><span style="font-weight: 700; font-size: 0.82rem; color: #c9a227; min-width: 65px;">Gold</span><span style="font-size: 0.78rem; color: #777;">từ 2,000K điểm</span></div>
-            <div class="tier-row"><div class="tier-dot" style="background: #0288d1;"></div><span style="font-weight: 700; font-size: 0.82rem; color: #0288d1; min-width: 65px;">Diamond</span><span style="font-size: 0.78rem; color: #777;">từ 5,000K điểm</span></div>
+            <div class="tier-row"><div class="tier-dot" style="background: #aaa;"></div><span style="font-weight: 700; font-size: 0.82rem; color: #666; min-width: 65px;">Silver</span><span style="font-size: 0.78rem; color: #777;">từ 500 điểm</span></div>
+            <div class="tier-row"><div class="tier-dot" style="background: #c9a227;"></div><span style="font-weight: 700; font-size: 0.82rem; color: #c9a227; min-width: 65px;">VIP</span><span style="font-size: 0.78rem; color: #777;">từ 2,000 điểm</span></div>
+            <div class="tier-row"><div class="tier-dot" style="background: #0288d1;"></div><span style="font-weight: 700; font-size: 0.82rem; color: #0288d1; min-width: 65px;">VVIP</span><span style="font-size: 0.78rem; color: #777;">từ 5,000 điểm</span></div>
         </div>
     </div>
 </div>
 
 @section Scripts {
 <script>
+    // @@ts-nocheck
     function switchAuthTab(tab) {
-        const loginTab = document.getElementById('tab-login');
-        const registerTab = document.getElementById('tab-register');
-        const loginForm = document.getElementById('login-form');
-        const registerForm = document.getElementById('register-form');
+        var loginTab = document.getElementById('tab-login');
+        var registerTab = document.getElementById('tab-register');
+        var loginForm = document.getElementById('login-form');
+        var registerForm = document.getElementById('register-form');
         
         if (tab === 'login') {
-            loginTab.classList.add('active');
-            registerTab.classList.remove('active');
-            loginForm.classList.remove('hidden');
-            registerForm.classList.add('hidden');
+            if (loginTab) loginTab.classList.add('active');
+            if (registerTab) registerTab.classList.remove('active');
+            if (loginForm) loginForm.classList.remove('hidden');
+            if (registerForm) registerForm.classList.add('hidden');
         } else {
-            registerTab.classList.add('active');
-            loginTab.classList.remove('active');
-            registerForm.classList.remove('hidden');
-            loginForm.classList.add('hidden');
+            if (registerTab) registerTab.classList.add('active');
+            if (loginTab) loginTab.classList.remove('active');
+            if (registerForm) registerForm.classList.remove('hidden');
+            if (loginForm) loginForm.classList.add('hidden');
         }
     }
-
-    // Populate Ngày, Tháng, Năm
-    (function() {
-        const daySelect = document.getElementById('dob-day');
-        const monthSelect = document.getElementById('dob-month');
-        const yearSelect = document.getElementById('dob-year');
-
-        if (daySelect && monthSelect && yearSelect) {
-            for (let d = 1; d <= 31; d++) {
-                const opt = document.createElement('option');
-                opt.value = d;
-                opt.textContent = (d < 10 ? '0' : '') + d;
-                daySelect.appendChild(opt);
-            }
-            for (let m = 1; m <= 12; m++) {
-                const opt = document.createElement('option');
-                opt.value = m;
-                opt.textContent = (m < 10 ? '0' : '') + m;
-                monthSelect.appendChild(opt);
-            }
-            const currentYear = new Date().getFullYear();
-            for (let y = currentYear - 12; y >= 1950; y--) {
-                const opt = document.createElement('option');
-                opt.value = y;
-                opt.textContent = y;
-                yearSelect.appendChild(opt);
-            }
-        }
-    })();
 </script>
 }

@@ -1,5 +1,7 @@
+@model Du_an_CGV.Models.ApplicationUser
 @{
     ViewData["Title"] = "Tài Khoản Của Tôi";
+    var bookingsCount = ViewBag.BookingsCount ?? 0;
 }
 
 @section Styles {
@@ -27,27 +29,45 @@
                 CGV
             </div>
             <p style="color: #888; font-size: 0.72rem; font-weight: 600; margin: 0 0 4px;">HỌ VÀ TÊN</p>
-            <h2 style="font-family: 'Montserrat', 'Roboto', sans-serif; font-size: 1.2rem; font-weight: 800; margin: 0 0 16px; color: #222;">Khách Hàng Thành Viên CGV</h2>
+            <h2 style="font-family: 'Montserrat', 'Roboto', sans-serif; font-size: 1.2rem; font-weight: 800; margin: 0 0 16px; color: #222;">@Model.FullName</h2>
             
             <p style="color: #888; font-size: 0.72rem; font-weight: 600; margin: 0 0 4px;">EMAIL / SỐ ĐIỆN THOẠI</p>
-            <p style="color: #333; font-size: 0.9rem; font-weight: 600; margin: 0 0 16px;">khachhang@cgv.vn · 0901 234 567</p>
+            <p style="color: #333; font-size: 0.9rem; font-weight: 600; margin: 0 0 16px;">@Model.Email · @(Model.PhoneNumber ?? "Chưa cập nhật")</p>
             
             <p style="color: #888; font-size: 0.72rem; font-weight: 600; margin: 0 0 4px;">CẤP ĐỘ THÀNH VIÊN</p>
-            <p style="margin: 0 0 24px;"><span style="background: #e8f5e9; color: #2e7d32; font-weight: 800; font-size: 0.75rem; padding: 4px 10px; border-radius: 4px;">Standard Member</span></p>
+            <p style="margin: 0 0 12px;">
+                <span style="background: #e8f5e9; color: #2e7d32; font-weight: 800; font-size: 0.75rem; padding: 4px 10px; border-radius: 4px;">@Model.MemberTier</span>
+                @if (User.IsInRole("Admin"))
+                {
+                    <span style="background: #ffebee; color: #c62828; font-weight: 800; font-size: 0.75rem; padding: 4px 10px; border-radius: 4px; margin-left: 6px;">QUẢN TRỊ VIÊN HỆ THỐNG</span>
+                }
+            </p>
+
+            <p style="color: #888; font-size: 0.72rem; font-weight: 600; margin: 0 0 4px;">RẠP YÊU THÍCH</p>
+            <p style="color: #333; font-size: 0.88rem; font-weight: 600; margin: 0 0 24px;">@(Model.FavoriteCinema ?? "CGV Landmark 81") (@(Model.City ?? "Hồ Chí Minh"))</p>
             
-            <button class="btn-outline" type="button" onclick="window.location.href='@Url.Action("Register", "Account")'">ĐĂNG XUẤT</button>
+            <div style="display: flex; gap: 10px;">
+                @if (User.IsInRole("Admin"))
+                {
+                    <a asp-controller="Admin" asp-action="Index" class="btn-primary" style="background: #111;">⚙️ VÀO TRANG QUẢN LÝ</a>
+                }
+                <form asp-controller="Account" asp-action="Logout" method="post" style="display: inline;">
+                    @Html.AntiForgeryToken()
+                    <button class="btn-outline" type="submit">ĐĂNG XUẤT</button>
+                </form>
+            </div>
         </section>
 
         <!-- Cột số dư & Thẻ quà tặng -->
         <section style="background: #222; color: white; border-radius: 6px; padding: 28px; box-shadow: 0 4px 16px rgba(0,0,0,0.15); display: flex; flex-direction: column; justify-content: space-between;">
             <div>
                 <p style="color: #aaa; font-size: 0.75rem; font-weight: 700; letter-spacing: 1px; margin: 0 0 8px;">SỐ DƯ TÀI KHOẢN CGV POINT</p>
-                <p style="color: white; font-family: 'Montserrat', 'Roboto', sans-serif; font-size: 2.2rem; font-weight: 800; margin: 0 0 8px;">0 <span style="font-size: 1.2rem; font-weight: 600; color: #ff9800;">Điểm</span></p>
-                <p style="color: #aaa; font-size: 0.8rem; line-height: 1.6; margin: 0 0 24px;">Điểm tích lũy và tiền hoàn vé sẽ được cộng trực tiếp vào số dư để đổi vé xem phim hoặc bắp nước miễn phí.</p>
+                <p style="color: white; font-family: 'Montserrat', 'Roboto', sans-serif; font-size: 2.2rem; font-weight: 800; margin: 0 0 8px;">@Model.RewardPoints <span style="font-size: 1.2rem; font-weight: 600; color: #ff9800;">Điểm</span></p>
+                <p style="color: #aaa; font-size: 0.8rem; line-height: 1.6; margin: 0 0 24px;">Điểm tích lũy và quà tặng sinh nhật được cộng trực tiếp vào số dư thành viên để đổi vé xem phim và combo bắp nước.</p>
             </div>
             
-            <div style="display: flex; gap: 12px;">
-                <a asp-controller="Booking" asp-action="MyTickets" class="btn-primary">VÉ CỦA TÔI (0)</a>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                <a asp-controller="Booking" asp-action="MyTickets" class="btn-primary">VÉ CỦA TÔI (@bookingsCount)</a>
                 <a asp-controller="Movie" asp-action="Index" class="btn-dark">MUA VÉ NGAY</a>
             </div>
         </section>

@@ -1,0 +1,33 @@
+@{
+    ViewData["Title"] = "Từ Chối Truy Cập - CGV Cinemas";
+}
+
+<main style="max-width: 760px; min-height: 60vh; margin: 40px auto; padding: 32px 20px; text-align: center;">
+    <div style="background: white; border-radius: 8px; padding: 48px 32px; border: 1px solid #e0dad0; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+        <div style="font-size: 4.5rem; margin-bottom: 16px;">🚫</div>
+        
+        <h1 style="font-family: 'Montserrat', 'Roboto', sans-serif; font-size: 1.8rem; font-weight: 800; color: #b71c1c; margin-bottom: 12px;">
+            KHÔNG CÓ QUYỀN TRUY CẬP
+        </h1>
+        
+        <p style="font-size: 0.95rem; color: #555; line-height: 1.6; max-width: 520px; margin: 0 auto 24px;">
+            Khu vực <strong>Trang Quản Trị Hệ Thống CGV</strong> được phân quyền bảo mật riêng biệt. 
+            Chỉ những tài khoản có vai trò <strong>Quản Lý (Admin)</strong> mới được phép xem và thực hiện các thao tác quản lý dữ liệu.
+        </p>
+
+        <div style="background: #fff8e1; border: 1px solid #ffe082; border-radius: 6px; padding: 16px; max-width: 460px; margin: 0 auto 30px; text-align: left; font-size: 0.85rem;">
+            <p style="margin: 0 0 6px; font-weight: 700; color: #e65100;">💡 Bạn là Quản lý hệ thống?</p>
+            <p style="margin: 0 0 4px; color: #444;">Vui lòng đăng xuất và đăng nhập bằng tài khoản Quản trị viên:</p>
+            <p style="margin: 0; color: #111;">Email: <strong>admin@cgv.vn</strong> | Mật khẩu: <strong>Admin@123456</strong></p>
+        </div>
+
+        <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+            <a asp-controller="Home" asp-action="Index" style="background: #e30613; color: white; padding: 11px 24px; border-radius: 4px; font-weight: 700; font-size: 0.9rem; text-decoration: none;">
+                ← Về Trang Chủ
+            </a>
+            <a asp-controller="Account" asp-action="Register" asp-route-tab="login" asp-route-returnUrl="/Admin" style="background: #1a1a1a; color: white; padding: 11px 24px; border-radius: 4px; font-weight: 700; font-size: 0.9rem; text-decoration: none;">
+                🔑 Đăng Nhập Tài Khoản Admin
+            </a>
+        </div>
+    </div>
+</main>

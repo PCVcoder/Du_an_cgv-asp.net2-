@@ -137,27 +137,39 @@
                 <!-- Contact Form -->
                 <div class="form-box">
                     <h3 class="form-title">GỬI TIN NHẮN CHO CGV</h3>
-                    <form onsubmit="event.preventDefault(); alert('Cảm ơn ý kiến của bạn! CGV sẽ phản hồi sớm nhất.');" style="display: flex; flex-direction: column; gap: 8px;">
+                    @if (TempData["SuccessMessage"] != null)
+                    {
+                        <div style="background: #e8f5e9; color: #2e7d32; padding: 12px; border-radius: 4px; margin-bottom: 12px; font-weight: 700; font-size: 0.85rem;">
+                            ✅ @TempData["SuccessMessage"]
+                        </div>
+                    }
+                    <form asp-controller="Home" asp-action="Contact" method="post" style="display: flex; flex-direction: column; gap: 8px;">
+                        @Html.AntiForgeryToken()
                         <p style="text-align: right; font-size: 0.72rem; color: #e30613; margin: 0;">* Bắt buộc nhập thông tin</p>
                         
                         <div class="input-group">
                             <label>Họ và tên <span style="color: #e30613;">*</span></label>
-                            <input type="text" placeholder="Nguyễn Văn A" required>
+                            <input type="text" name="FullName" placeholder="Nguyễn Văn A" required>
                         </div>
                         
                         <div class="input-group">
                             <label>Email liên hệ <span style="color: #e30613;">*</span></label>
-                            <input type="email" placeholder="example@email.com" required>
+                            <input type="email" name="Email" placeholder="example@email.com" required>
                         </div>
                         
                         <div class="input-group">
                             <label>Số điện thoại</label>
-                            <input type="tel" placeholder="0901 234 567">
+                            <input type="tel" name="PhoneNumber" placeholder="0901 234 567">
+                        </div>
+
+                        <div class="input-group">
+                            <label>Chủ đề liên hệ <span style="color: #e30613;">*</span></label>
+                            <input type="text" name="Subject" placeholder="Hỏi về dịch vụ, thẻ thành viên, góp ý..." required>
                         </div>
                         
                         <div class="input-group">
                             <label>Nội dung câu hỏi / phản ánh <span style="color: #e30613;">*</span></label>
-                            <textarea rows="5" placeholder="Nhập chi tiết nội dung cần hỗ trợ..." required></textarea>
+                            <textarea rows="4" name="Message" placeholder="Nhập chi tiết nội dung cần hỗ trợ..." required></textarea>
                         </div>
                         
                         <div style="display: flex; justify-content: flex-end; margin-top: 8px;">

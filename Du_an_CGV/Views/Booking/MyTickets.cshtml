@@ -1,101 +1,255 @@
+@model List<Du_an_CGV.Models.Booking>
 @{
-    ViewData["Title"] = "Vé Của Tôi";
+    ViewData["Title"] = "Vé Của Tôi - CGV Cinemas";
+    var searchTerm = (string?)ViewBag.SearchTerm ?? "";
+    var lastBookingCode = (string?)ViewBag.LastBookingCode;
+    var isGuestFirstVisit = (bool?)ViewBag.IsGuestFirstVisit ?? false;
 }
 
 @section Styles {
 <style>
-    .container { max-width: 960px; margin: 0 auto; padding: 28px 16px 56px; min-height: 65vh; }
+    .container { max-width: 980px; margin: 0 auto; padding: 28px 16px 56px; min-height: 70vh; }
     
-    .page-header { display: flex; align-items: flex-end; justify-content: space-between; border-bottom: 2px solid #e30613; padding-bottom: 12px; margin-bottom: 24px; }
-    .account-label { margin: 0 0 4px; color: #777; font-size: 0.78rem; font-weight: 600; }
-    .page-title { margin: 0; font-family: 'Montserrat', 'Roboto', sans-serif; font-size: 1.7rem; font-weight: 800; letter-spacing: 0.5px; color: #1a1a1a; }
+    .page-header { display: flex; align-items: flex-end; justify-content: space-between; border-bottom: 2px solid #e30613; padding-bottom: 14px; margin-bottom: 24px; flex-wrap: wrap; gap: 14px; }
+    .account-label { margin: 0 0 4px; color: #777; font-size: 0.78rem; font-weight: 700; letter-spacing: 1px; }
+    .page-title { margin: 0; font-family: 'Montserrat', 'Roboto', sans-serif; font-size: 1.65rem; font-weight: 800; letter-spacing: 0.5px; color: #1a1a1a; }
     
     .btn-new-ticket {
-        display: inline-block; border: none; border-radius: 3px; background: #e30613; color: white;
-        padding: 10px 20px; font-weight: 700; font-size: 0.85rem; text-decoration: none; transition: background 0.15s;
+        display: inline-flex; align-items: center; gap: 6px; border: none; border-radius: 4px; background: #e30613; color: white !important;
+        padding: 10px 18px; font-weight: 800; font-size: 0.82rem; text-decoration: none; transition: background 0.15s; letter-spacing: 0.5px;
     }
     .btn-new-ticket:hover { background: #c00010; }
     
-    .ticket-list { display: grid; gap: 18px; }
+    .ticket-list { display: grid; gap: 20px; }
     
-    .ticket-card { background: white; border-radius: 6px; overflow: hidden; display: grid; grid-template-columns: 120px 1fr 180px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); border: 1px solid #e8e8e8; }
-    .ticket-poster { width: 120px; height: 100%; min-height: 190px; object-fit: cover; }
+    .ticket-card {
+        background: white; border-radius: 8px; overflow: hidden; display: grid; grid-template-columns: 150px 1fr 220px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.06); border: 1px solid #e0e0e0; transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .ticket-card.highlight {
+        border: 2px solid #2e7d32;
+        box-shadow: 0 6px 20px rgba(46,125,50,0.18);
+    }
+    .ticket-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
     
-    .ticket-info { padding: 20px 22px; display: flex; flex-direction: column; justify-content: center; }
-    .ticket-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-    .ticket-id { color: #e30613; font-size: 0.75rem; font-weight: 800; margin: 0; }
+    .ticket-poster { width: 150px; height: 100%; min-height: 220px; object-fit: cover; display: block; }
     
-    .badge { border-radius: 12px; padding: 3px 9px; font-size: 0.62rem; font-weight: 700; }
-    .badge-paid { background: #e8f5e9; color: #2e7d32; }
-    .badge-unpaid { background: #fff3e0; color: #e65100; }
+    .ticket-info { padding: 20px 24px; display: flex; flex-direction: column; justify-content: space-between; }
+    .ticket-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+    .ticket-id { color: #e30613; font-size: 0.85rem; font-weight: 800; margin: 0; letter-spacing: 0.5px; }
     
-    .movie-title { font-size: 1.15rem; margin: 0 0 10px; color: #1a1a1a; font-weight: 800; font-family: 'Montserrat', 'Roboto', sans-serif; }
-    .detail-line { color: #555; font-size: 0.82rem; margin: 0 0 4px; }
-    .detail-line-mb { margin: 0 0 8px; font-weight: 600; color: #333; }
+    .badge { border-radius: 4px; padding: 3px 8px; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.5px; }
+    .badge-paid { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+    .badge-unpaid { background: #fff3e0; color: #e65100; border: 1px solid #ffcc80; }
+    .badge-cancelled { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
     
-    .price { color: #e30613; font-size: 1rem; font-weight: 800; margin: 4px 0 0; }
+    .movie-title { font-size: 1.25rem; margin: 0 0 10px; color: #111; font-weight: 800; font-family: 'Montserrat', 'Roboto', sans-serif; line-height: 1.3; }
     
-    .action-col { border-left: 1px dashed #ccc; display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: 10px; padding: 18px; position: relative; background: #fafafa; }
+    .ticket-meta-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 16px; margin-bottom: 12px; }
+    .meta-item { font-size: 0.82rem; color: #444; }
+    .meta-item strong { color: #111; }
     
-    .qr-code { width: 64px; height: 64px; background: repeating-linear-gradient(45deg,#111 0 4px,#fff 4px 8px); border: 4px solid white; box-shadow: 0 0 0 1px #ddd; margin: 0 auto; }
+    .price-tag { color: #e30613; font-size: 1.25rem; font-weight: 900; margin: 0; }
     
-    .btn-action { border: none; border-radius: 3px; background: #e30613; color: white; padding: 9px; font-size: 0.75rem; font-weight: 700; cursor: pointer; text-align: center; }
-    .btn-action:hover { background: #c00010; }
-    .btn-refund { border: 1px solid #e30613; background: white; color: #e30613; }
-    .btn-refund:hover { background: #fff0f0; }
-    .btn-link { border: none; background: transparent; color: #777; padding: 4px 8px; font-size: 0.72rem; text-decoration: underline; cursor: pointer; text-align: center; }
+    .action-col {
+        border-left: 2px dashed #e5e5e5; display: flex; flex-direction: column; align-items: center;
+        justify-content: center; gap: 10px; padding: 20px 16px; background: #fafafa; text-align: center;
+    }
+    
+    .qr-mock {
+        width: 84px; height: 84px; background: white; padding: 6px; border: 1px solid #ccc; border-radius: 4px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: center;
+    }
+    .qr-mock svg { width: 100%; height: 100%; }
+
+    .btn-print {
+        background: #212121; color: white !important; border: none; padding: 7px 14px; border-radius: 4px;
+        font-size: 0.74rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: background 0.15s;
+    }
+    .btn-print:hover { background: #e30613; }
+
+    @@media print {
+        body { background: white !important; }
+        .top-bar, .main-header, .quick-links, footer, .page-header, .search-box-bar, .btn-print, .btn-new-ticket { display: none !important; }
+        .container { max-width: 100% !important; padding: 0 !important; }
+        .ticket-card { box-shadow: none !important; border: 2px solid #333 !important; page-break-inside: avoid; }
+    }
+
+    @@media (max-width: 768px) {
+        .ticket-card { grid-template-columns: 1fr; }
+        .ticket-poster { width: 100%; height: 180px; }
+        .action-col { border-left: none; border-top: 2px dashed #e5e5e5; }
+    }
 </style>
 }
 
 <main class="container">
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div style="background: #e8f5e9; border: 2px solid #81c784; border-radius: 8px; padding: 18px 24px; margin-bottom: 24px; display: flex; align-items: center; gap: 16px; box-shadow: 0 4px 12px rgba(46,125,50,0.12);">
+            <div style="font-size: 2.5rem; line-height: 1;">🎉</div>
+            <div style="flex: 1;">
+                <h3 style="margin: 0 0 4px; color: #1b5e20; font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 1.15rem;">
+                    ĐẶT VÉ XEM PHIM THÀNH CÔNG!
+                </h3>
+                <p style="margin: 0; color: #2e7d32; font-size: 0.88rem; font-weight: 600;">
+                    @TempData["SuccessMessage"] Vui lòng lưu lại mã vé hoặc xuất trình mã QR bên dưới khi đến rạp CGV!
+                </p>
+            </div>
+            <button type="button" onclick="window.print()" class="btn-print" style="padding: 10px 16px; font-size: 0.85rem; background: #2e7d32;">
+                🖨️ In Vé Ngay
+            </button>
+        </div>
+    }
+
     <div class="page-header">
         <div>
-            <p class="account-label">TÀI KHOẢN THÀNH VIÊN</p>
-            <h1 class="page-title">VÉ CỦA TÔI</h1>
+            <p class="account-label">HỆ THỐNG VÉ ĐIỆN TỬ CGV</p>
+            <h1 class="page-title">
+                VÉ XEM PHIM CỦA TÔI
+                @if (Model != null && Model.Any())
+                {
+                    <span style="font-size: 1.15rem; color: #e30613; font-weight: 700;">(@Model.Count vé)</span>
+                }
+            </h1>
         </div>
-        <a asp-controller="Movie" asp-action="Index" class="btn-new-ticket">+ ĐẶT VÉ MỚI</a>
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <form method="get" asp-controller="Booking" asp-action="MyTickets" style="display: flex; gap: 6px;" class="search-box-bar">
+                <input type="text" name="search" value="@searchTerm" placeholder="Mã vé / SĐT / Email..." style="padding: 10px 14px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.85rem; width: 220px; outline: none;" />
+                <button type="submit" style="background: #222; color: white; border: none; padding: 10px 16px; border-radius: 4px; font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: background 0.15s;">Tra cứu</button>
+                @if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    <a asp-controller="Booking" asp-action="MyTickets" style="padding: 10px 12px; background: #e0e0e0; color: #333; border-radius: 4px; font-size: 0.82rem; font-weight: 700; text-decoration: none;">Xem tất cả</a>
+                }
+            </form>
+            <a asp-controller="Booking" asp-action="Index" class="btn-new-ticket">+ ĐẶT VÉ KHÁC</a>
+        </div>
     </div>
 
-    <div class="ticket-list">
-        <!-- Ticket 1: Paid -->
-        <article class="ticket-card">
-            <img src="https://images.unsplash.com/photo-1778973812223-e5079431fa47?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400" alt="Vùng Bắt Quỷ Dữ" class="ticket-poster">
-            <div class="ticket-info">
-                <div class="ticket-header">
-                    <p class="ticket-id">MÃ VÉ: TKT-9824</p>
-                    <span class="badge badge-paid">ĐÃ THANH TOÁN</span>
-                </div>
-                <h2 class="movie-title">Vùng Bắt Quỷ Dữ</h2>
-                <p class="detail-line">📍 CGV Vincom Center Landmark 81 - Phòng chiếu IMAX</p>
-                <p class="detail-line detail-line-mb">🕒 19:30, Hôm nay · Ghế: <strong>G8, G9</strong></p>
-                <p class="detail-line" style="color: #666; font-size: 0.75rem;">Combo: Sweet Couple Combo (1 Bắp + 2 Nước)</p>
-                <p class="price">419.000 VNĐ</p>
-            </div>
-            <div class="action-col">
-                <div class="qr-code" title="Mã QR vào phòng chiếu"></div>
-                <button type="button" class="btn-action btn-refund" onclick="alert('Yêu cầu hoàn tiền đã gửi! CGV sẽ xử lý trong vòng 24h.')">HOÀN TIỀN</button>
-                <p style="color: #888; font-size: 0.62rem; margin: 0; text-align: center;">Quét mã QR tại cổng soat vé</p>
-            </div>
-        </article>
+    @if (Model != null && Model.Any())
+    {
+        <div class="ticket-list">
+            @foreach (var ticket in Model)
+            {
+                var movie = ticket.Showtime?.Movie;
+                var cinema = ticket.Showtime?.CinemaHall?.Cinema;
+                var hall = ticket.Showtime?.CinemaHall;
+                var isLatest = !string.IsNullOrEmpty(lastBookingCode) && ticket.BookingCode.Equals(lastBookingCode, StringComparison.OrdinalIgnoreCase);
 
-        <!-- Ticket 2: Unpaid -->
-        <article class="ticket-card">
-            <img src="https://images.unsplash.com/photo-1568038479111-87bf80659645?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400" alt="Lật Mặt 7: Một Điều Ước" class="ticket-poster">
-            <div class="ticket-info">
-                <div class="ticket-header">
-                    <p class="ticket-id">MÃ VÉ: TKT-1102</p>
-                    <span class="badge badge-unpaid">CHƯA THANH TOÁN</span>
-                </div>
-                <h2 class="movie-title">Lật Mặt 7: Một Điều Ước</h2>
-                <p class="detail-line">📍 CGV Sư Vạn Hạnh - Cinema 02</p>
-                <p class="detail-line detail-line-mb">🕒 20:15, Ngày mai · Ghế: <strong>E4, E5</strong></p>
-                <p class="price">220.000 VNĐ</p>
+                <article class="ticket-card @(isLatest ? "highlight" : "")">
+                    <img src="@(movie?.PosterUrl ?? "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400")" alt="@(movie?.Title ?? "Phim")" class="ticket-poster" onerror="this.src='https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400'">
+                    
+                    <div class="ticket-info">
+                        <div>
+                            <div class="ticket-header">
+                                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                    <p class="ticket-id">MÃ VÉ: <strong>@ticket.BookingCode</strong></p>
+                                    @if (isLatest)
+                                    {
+                                        <span style="background: #e8f5e9; color: #2e7d32; font-size: 0.68rem; font-weight: 800; padding: 2px 8px; border-radius: 4px; border: 1px solid #a5d6a7;">★ VÉ VỪA ĐẶT</span>
+                                    }
+                                </div>
+                                @if (ticket.Status == "Đã thanh toán")
+                                {
+                                    <span class="badge badge-paid">✔ ĐÃ THANH TOÁN</span>
+                                }
+                                else if (ticket.Status == "Chờ xử lý")
+                                {
+                                    <span class="badge badge-unpaid">⏳ CHỜ XỬ LÝ</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-cancelled">✖ ĐÃ HỦY</span>
+                                }
+                            </div>
+                            
+                            <h2 class="movie-title">@(movie?.Title ?? "Phim CGV")</h2>
+                            
+                            <div class="ticket-meta-grid">
+                                <div class="meta-item">📍 Rạp: <strong>@(cinema?.Name ?? "CGV Cinemas")</strong></div>
+                                <div class="meta-item">🚪 Phòng: <strong>@(hall?.Name ?? "Cinema 01")</strong></div>
+                                <div class="meta-item">
+                                    🕒 Suất: <strong style="color: #e30613;">
+                                        @(ticket.Showtime != null ? ticket.Showtime.StartTime.ToString("HH:mm - dd/MM/yyyy") : ticket.BookingDate.ToString("dd/MM/yyyy"))
+                                    </strong>
+                                </div>
+                                <div class="meta-item">🎞️ Định dạng: <strong>@(ticket.Showtime?.Format ?? "2D Phụ Đề")</strong></div>
+                                <div class="meta-item" style="grid-column: span 2;">
+                                    🎟️ Ghế & Bắp nước: <strong style="color: #e30613; font-size: 0.9rem;">@ticket.SeatsList</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="border-top: 1px solid #eee; padding-top: 10px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 8px;">
+                            <div>
+                                <div style="font-size: 0.75rem; color: #666;">
+                                    Khách: <strong>@ticket.CustomerName</strong> (@ticket.CustomerPhone)
+                                </div>
+                                <div style="font-size: 0.72rem; color: #888;">
+                                    Thanh toán: @ticket.PaymentMethod · Ngày đặt: @ticket.BookingDate.ToString("HH:mm dd/MM/yyyy")
+                                </div>
+                            </div>
+                            <div>
+                                <span style="font-size: 0.72rem; color: #777; display: block; text-align: right;">Tổng thanh toán:</span>
+                                <p class="price-tag">@ticket.TotalAmount.ToString("N0") VNĐ</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="action-col">
+                        <div class="qr-mock" title="Mã QR vào phòng chiếu">
+                            <!-- SVG QR Pattern -->
+                            <svg viewBox="0 0 100 100" fill="#111">
+                                <rect x="5" y="5" width="25" height="25" fill="#111" />
+                                <rect x="9" y="9" width="17" height="17" fill="#fff" />
+                                <rect x="13" y="13" width="9" height="9" fill="#111" />
+                                <rect x="70" y="5" width="25" height="25" fill="#111" />
+                                <rect x="74" y="9" width="17" height="17" fill="#fff" />
+                                <rect x="78" y="13" width="9" height="9" fill="#111" />
+                                <rect x="5" y="70" width="25" height="25" fill="#111" />
+                                <rect x="9" y="74" width="17" height="17" fill="#fff" />
+                                <rect x="13" y="78" width="9" height="9" fill="#111" />
+                                <rect x="40" y="10" width="8" height="8" />
+                                <rect x="52" y="15" width="8" height="8" />
+                                <rect x="35" y="35" width="12" height="12" />
+                                <rect x="55" y="40" width="10" height="10" />
+                                <rect x="70" y="55" width="12" height="8" />
+                                <rect x="40" y="65" width="10" height="10" />
+                                <rect x="60" y="75" width="10" height="10" />
+                                <rect x="80" y="80" width="15" height="15" />
+                            </svg>
+                        </div>
+                        <div style="font-size: 0.8rem; font-weight: 800; color: #111; letter-spacing: 0.5px;">@ticket.BookingCode</div>
+                        <p style="color: #666; font-size: 0.65rem; margin: 0; line-height: 1.3;">Xuất trình mã này tại quầy vé hoặc cổng vào phòng chiếu</p>
+                        <button type="button" onclick="window.print()" class="btn-print">
+                            🖨️ In Vé / Lưu PDF
+                        </button>
+                    </div>
+                </article>
+            }
+        </div>
+    }
+    else
+    {
+        <div style="background: white; border-radius: 8px; padding: 48px 24px; text-align: center; border: 1px solid #e5e5e5; box-shadow: 0 4px 16px rgba(0,0,0,0.05); max-width: 600px; margin: 20px auto;">
+            <div style="font-size: 3.5rem; margin-bottom: 14px;">🎟️</div>
+            <h3 style="font-family: 'Montserrat', sans-serif; font-size: 1.3rem; font-weight: 800; color: #222; margin: 0 0 10px;">
+                @(string.IsNullOrEmpty(searchTerm) ? "Tra Cứu Vé Xem Phim CGV" : $"Không tìm thấy vé nào khớp với \"{searchTerm}\"")
+            </h3>
+            <p style="color: #666; font-size: 0.88rem; margin: 0 0 24px; line-height: 1.5;">
+                @(string.IsNullOrEmpty(searchTerm) 
+                    ? "Nếu bạn đã đặt vé nhưng chưa đăng nhập, vui lòng nhập Mã vé hoặc Số điện thoại để kiểm tra thông tin vé của bạn." 
+                    : "Vui lòng kiểm tra lại mã vé hoặc số điện thoại bạn đã dùng khi đặt vé.")
+            </p>
+
+            <form method="get" asp-controller="Booking" asp-action="MyTickets" style="display: flex; gap: 8px; max-width: 420px; margin: 0 auto 24px;">
+                <input type="text" name="search" value="@searchTerm" placeholder="Nhập Mã vé (CGV-...) hoặc SĐT" style="flex: 1; padding: 12px 14px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;" required />
+                <button type="submit" style="background: #e30613; color: white; border: none; padding: 12px 20px; border-radius: 4px; font-weight: 800; font-size: 0.9rem; cursor: pointer;">Tìm Vé</button>
+            </form>
+
+            <div style="border-top: 1px solid #eee; padding-top: 20px;">
+                <a asp-controller="Booking" asp-action="Index" class="btn-new-ticket">MUA VÉ XEM PHIM NGAY</a>
             </div>
-            <div class="action-col">
-                <div class="qr-code"></div>
-                <button type="button" class="btn-action" onclick="alert('Đang chuyển đến cổng thanh toán...')">THANH TOÁN NGAY</button>
-                <button type="button" class="btn-link" onclick="if(confirm('Bạn có chắc muốn hủy vé này?')) this.closest('.ticket-card').remove();">Hủy vé</button>
-            </div>
-        </article>
-    </div>
+        </div>
+    }
 </main>

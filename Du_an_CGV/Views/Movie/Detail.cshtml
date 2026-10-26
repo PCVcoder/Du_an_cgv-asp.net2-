@@ -1,5 +1,6 @@
+@model Du_an_CGV.Models.Movie
 @{
-    ViewData["Title"] = "Nội Dung Phim - Vùng Bắt Quỷ Dữ";
+    ViewData["Title"] = $"Nội Dung Phim - {Model.Title}";
 }
 
 @section Styles {
@@ -11,8 +12,8 @@
     .back-btn { background: none; border: none; color: #555; padding: 0; font-size: 0.82rem; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 4px; }
     .back-btn:hover { color: #e30613; }
 
-    .detail-grid { display: grid; grid-template-columns: 240px 1fr; gap: 40px; align-items: start; }
-    .poster { width: 100%; height: 350px; display: block; object-fit: cover; border-radius: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+    .detail-grid { display: grid; grid-template-columns: 260px 1fr; gap: 40px; align-items: start; }
+    .poster { width: 100%; height: 380px; display: block; object-fit: cover; border-radius: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
     
     .movie-title { font-family: 'Montserrat', 'Roboto', sans-serif; font-size: 1.6rem; font-weight: 800; text-transform: uppercase; margin: 0 0 16px; padding-bottom: 12px; border-bottom: 1px solid #d5d0c3; color: #1a1a1a; }
     
@@ -20,15 +21,15 @@
     .meta-grid strong { font-weight: 700; color: #222; }
     .meta-grid span { color: #444; }
 
-    .badges { display: flex; align-items: center; gap: 8px; margin-top: 16px; margin-bottom: 18px; }
-    .badge-rating { background: #b71c1c; color: white; border: 2px solid #8e1a1a; padding: 4px 8px; font-size: 0.95rem; font-weight: 900; border-radius: 2px; }
-    .badge-2d { background: #f8f8f8; color: #555; border: 2px solid #aaa; border-radius: 3px; padding: 6px 12px; font-size: 0.85rem; font-weight: 800; }
-    .badge-starium { background: white; color: #ef7d22; border: 2px solid #ef7d22; border-radius: 3px; padding: 6px 12px; font-size: 0.8rem; font-weight: 800; }
+    .badges { display: flex; align-items: center; gap: 8px; margin-top: 16px; margin-bottom: 18px; flex-wrap: wrap; }
+    .badge-rating { color: white; border: 2px solid rgba(0,0,0,0.2); padding: 4px 8px; font-size: 0.95rem; font-weight: 900; border-radius: 2px; }
+    .badge-format { background: #f8f8f8; color: #555; border: 2px solid #aaa; border-radius: 3px; padding: 6px 12px; font-size: 0.82rem; font-weight: 800; }
+    .badge-special { background: white; color: #e30613; border: 2px solid #e30613; border-radius: 3px; padding: 6px 12px; font-size: 0.8rem; font-weight: 800; }
 
     .detail-grid .btn-buy-ticket {
         display: inline-block; background: #e30613; color: white; border: none; border-radius: 3px;
-        padding: 10px 28px; font-size: 0.9rem; font-weight: 800; cursor: pointer; letter-spacing: 0.5px;
-        text-decoration: none; transition: background 0.15s;
+        padding: 12px 32px; font-size: 0.95rem; font-weight: 800; cursor: pointer; letter-spacing: 0.5px;
+        text-decoration: none; transition: background 0.15s; box-shadow: 0 2px 8px rgba(227,6,19,0.3);
     }
     .detail-grid .btn-buy-ticket:hover { background: #c00010; }
 
@@ -39,7 +40,7 @@
         display: flex; align-items: center; justify-content: center; gap: 16px; font-size: 0.85rem; font-weight: 700;
     }
     .ribbon-line { width: 1px; height: 18px; background: rgba(255,255,255,0.7); }
-    .ribbon-btn { background: none; border: none; color: white; padding: 0; font-size: 0.85rem; opacity: 0.85; cursor: pointer; font-weight: 700; }
+    .ribbon-btn { background: none; border: none; color: white; padding: 0; font-size: 0.85rem; opacity: 0.85; cursor: pointer; font-weight: 700; text-decoration: none; }
     .ribbon-btn:hover { opacity: 1; text-decoration: underline; }
 
     .synopsis { color: #333; font-size: 0.92rem; line-height: 1.7; margin: 0; background: white; padding: 24px; border-radius: 4px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
@@ -53,28 +54,49 @@
     </div>
 
     <div class="detail-grid">
-        <img src="https://images.unsplash.com/photo-1778973812223-e5079431fa47?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400" alt="Vùng Bắt Quỷ Dữ" class="poster">
+        <img src="@Model.PosterUrl" alt="@Model.Title" class="poster" onerror="this.src='https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400'">
 
         <div>
-            <h2 class="movie-title">VÙNG BẮT QUỶ DỮ</h2>
+            <h2 class="movie-title">@Model.Title</h2>
 
             <div class="meta-grid">
-                <strong>Đạo diễn:</strong><span>James Wan</span>
-                <strong>Diễn viên:</strong><span>Patrick Wilson, Vera Farmiga, Sterling Jerins</span>
-                <strong>Thể loại:</strong><span>Kinh Dị, Giật Gân, Huyền Bí</span>
-                <strong>Khởi chiếu:</strong><span>12/11/2026</span>
-                <strong>Thời lượng:</strong><span>94 phút</span>
-                <strong>Ngôn ngữ:</strong><span>Tiếng Anh - Phụ đề Tiếng Việt</span>
-                <strong>Rated:</strong><span style="color: #b71c1c; font-weight: 700;">T18 - Phim cấm phổ biến đến khán giả dưới 18 tuổi</span>
+                <strong>Đạo diễn:</strong><span>@(Model.Director ?? "Đang cập nhật")</span>
+                <strong>Diễn viên:</strong><span>@(Model.Cast ?? "Đang cập nhật")</span>
+                <strong>Thể loại:</strong><span>@Model.Genre</span>
+                <strong>Khởi chiếu:</strong><span>@Model.ReleaseDate.ToString("dd/MM/yyyy")</span>
+                <strong>Thời lượng:</strong><span>@Model.Duration phút</span>
+                <strong>Ngôn ngữ:</strong><span>@(Model.Language ?? "Tiếng Việt")</span>
+                <strong>Độ tuổi:</strong><span style="color: @Model.RatingColor; font-weight: 700;">@Model.Rating - Phân loại độ tuổi CGV</span>
             </div>
 
             <div class="badges">
-                <span class="badge-rating">T18</span>
-                <span class="badge-2d">2D DIGITAL</span>
-                <span class="badge-starium">IMAX / STARIUM</span>
+                <span class="badge-rating" style="background: @Model.RatingColor;">@Model.Rating</span>
+                @if (!string.IsNullOrEmpty(Model.Formats))
+                {
+                    <span class="badge-format">@Model.Formats</span>
+                }
+                @if (!string.IsNullOrEmpty(Model.SpecialTag))
+                {
+                    <span class="badge-special">@Model.SpecialTag</span>
+                }
             </div>
 
-            <a asp-controller="Booking" asp-action="Index" asp-route-movieId="2" class="btn-buy-ticket">MUA VÉ NGAY</a>
+            @if (Model.IsNowShowing && !Model.IsUpcoming)
+            {
+                <a asp-controller="Booking" asp-action="Index" asp-route-movieId="@Model.Id" class="btn-buy-ticket">MUA VÉ NGAY</a>
+            }
+            else if (Model.IsUpcoming)
+            {
+                <span style="display:inline-block;padding:10px 22px;background:#e3f2fd;color:#1565c0;font-weight:700;border-radius:4px;border:1px solid #bbdefb;font-size:0.9rem;">
+                    📢 PHIM SẮP CHIẾU (CHƯA MỞ BÁN VÉ)
+                </span>
+            }
+            else
+            {
+                <span style="display:inline-block;padding:10px 22px;background:#f5f5f5;color:#616161;font-weight:700;border-radius:4px;border:1px solid #e0e0e0;font-size:0.9rem;">
+                    ⚫ PHIM ĐÃ NGƯNG CHIẾU
+                </span>
+            }
         </div>
     </div>
 
@@ -82,14 +104,21 @@
         <div class="ribbon">
             <span>Chi tiết</span>
             <span class="ribbon-line"></span>
-            <button class="ribbon-btn" type="button" onclick="alert('Đang mở Trailer...')">Trailer</button>
+            @if (!string.IsNullOrEmpty(Model.TrailerUrl))
+            {
+                <a href="@Model.TrailerUrl" target="_blank" class="ribbon-btn">▶ Xem Trailer</a>
+            }
+            else
+            {
+                <button class="ribbon-btn" type="button" onclick="alert('Trailer đang được cập nhật!')">Trailer</button>
+            }
         </div>
     </div>
 
     <div class="synopsis">
         <h3 style="margin-top: 0; font-size: 1.05rem; font-weight: 700; color: #1a1a1a;">Tóm tắt nội dung</h3>
         <p style="margin: 0;">
-            Một câu chuyện kinh dị ám ảnh xoay quanh một gia đình mới chuyển đến căn nhà cổ ở ngoại ô. Những hiện tượng kỳ lạ và thế lực tà ác dần lộ diện, buộc họ phải tìm đến những chuyên gia trừ tà hàng đầu để giải cứu đứa con út khỏi sự chiếm đoạt của quỷ dữ. Sự thật đáng sợ về nguồn gốc của lời nguyền dần được hé mở, đẩy tất cả vào một cuộc chiến sinh tử không lối thoát.
+            @(Model.Synopsis ?? "Chưa có thông tin tóm tắt cho bộ phim này.")
         </p>
     </div>
 </main>

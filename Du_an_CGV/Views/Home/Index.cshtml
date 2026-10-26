@@ -1,5 +1,7 @@
+@model List<Du_an_CGV.Models.Movie>
 @{
     ViewData["Title"] = "Trang Chủ - Thế giới điện ảnh đỉnh cao";
+    var promos = (List<Du_an_CGV.Models.NewsOffer>?)ViewBag.Promos ?? new List<Du_an_CGV.Models.NewsOffer>();
 }
 
 @section Styles {
@@ -204,45 +206,16 @@
 
         <div style="display: flex; gap: 8px; align-items: center;">
             <div class="grid-4">
-                <!-- Movie 1 -->
-                <a asp-controller="Movie" asp-action="Detail" asp-route-id="1" class="movie-card">
-                    <div class="rating-badge" style="background: #2e7d32;">T16</div>
-                    <img src="https://images.unsplash.com/photo-1568038479111-87bf80659645?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400"
-                        alt="Lật Mặt 7: Một Điều Ước">
-                    <div class="movie-info">
-                        <p class="movie-title">Lật Mặt 7: Một Điều Ước</p>
-                    </div>
-                </a>
-
-                <!-- Movie 2 -->
-                <a asp-controller="Movie" asp-action="Detail" asp-route-id="2" class="movie-card">
-                    <div class="rating-badge" style="background: #b71c1c;">T18</div>
-                    <img src="https://images.unsplash.com/photo-1778973812223-e5079431fa47?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400"
-                        alt="Vùng Bắt Quỷ Dữ">
-                    <div class="movie-info">
-                        <p class="movie-title">Vùng Bắt Quỷ Dữ</p>
-                    </div>
-                </a>
-
-                <!-- Movie 3 -->
-                <a asp-controller="Movie" asp-action="Detail" asp-route-id="3" class="movie-card">
-                    <div class="rating-badge" style="background: #b71c1c;">T18</div>
-                    <img src="https://images.unsplash.com/photo-1651627567991-e4ec7b8fc72c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400"
-                        alt="Tế Vật Cải Mệnh">
-                    <div class="movie-info">
-                        <p class="movie-title">Tế Vật Cải Mệnh</p>
-                    </div>
-                </a>
-
-                <!-- Movie 4 -->
-                <a asp-controller="Movie" asp-action="Detail" asp-route-id="4" class="movie-card">
-                    <div class="rating-badge" style="background: #e65100;">T13</div>
-                    <img src="https://images.unsplash.com/photo-1609062757924-6c2d01b3b422?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400"
-                        alt="Kỳ Nghỉ Hè Nhớ Đời">
-                    <div class="movie-info">
-                        <p class="movie-title">Kỳ Nghỉ Hè Nhớ Đời</p>
-                    </div>
-                </a>
+                @foreach (var movie in Model.Take(4))
+                {
+                    <a asp-controller="Movie" asp-action="Detail" asp-route-id="@movie.Id" class="movie-card">
+                        <div class="rating-badge" style="background: @movie.RatingColor;">@movie.Rating</div>
+                        <img src="@movie.PosterUrl" alt="@movie.Title" onerror="this.src='https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400'">
+                        <div class="movie-info">
+                            <p class="movie-title">@movie.Title</p>
+                        </div>
+                    </a>
+                }
             </div>
             <a asp-controller="Movie" asp-action="Index" class="arrow-btn" title="Xem tất cả phim">›</a>
         </div>

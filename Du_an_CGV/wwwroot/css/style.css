@@ -48,25 +48,27 @@ ul {
 
 /* Top Bar */
 .top-bar {
-    background-color: #f8f8f8;
-    border-bottom: 1px solid #eaeaea;
+    background-color: #fdfdfd;
+    border-bottom: 1px solid #e2e2e2;
     font-size: 13px;
-    padding: 5px 0;
+    padding: 2px 0;
 }
 
 .top-bar-right {
     display: flex;
     justify-content: flex-end;
     gap: 20px;
+    align-items: center;
 }
 
 .top-bar-right a {
-    color: #555;
+    color: #222;
+    font-weight: 700;
     transition: color 0.2s;
 }
 
 .top-bar-right a:hover {
-    color: #e71a0f;
+    color: #e30613;
 }
 
 .top-bar-right i {

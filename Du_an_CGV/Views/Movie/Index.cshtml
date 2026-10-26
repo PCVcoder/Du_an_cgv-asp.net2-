@@ -1,5 +1,8 @@
+@model List<Du_an_CGV.Models.Movie>
 @{
-    ViewData["Title"] = "Danh Sách Phim";
+    var activeTab = (string?)ViewBag.ActiveTab ?? "now-showing";
+    var isUpcoming = (activeTab == "upcoming");
+    ViewData["Title"] = isUpcoming ? "Phim Sắp Chiếu" : "Phim Đang Chiếu";
 }
 
 @section Styles {
@@ -10,8 +13,13 @@
     
     .title-row { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 24px; padding-bottom: 8px; border-bottom: 2px solid #e30613; }
     .title-row h1 { font-family: 'Montserrat', 'Roboto', sans-serif; font-weight: 800; font-size: 1.6rem; color: #1a1a1a; margin: 0; letter-spacing: 0.5px; }
-    .alt-btn { background: none; border: none; color: #e30613; font-weight: 700; font-size: 0.82rem; padding: 0; letter-spacing: 0.5px; cursor: pointer; text-decoration: none; }
-    .alt-btn:hover { text-decoration: underline; }
+    .tab-switch { display: flex; gap: 12px; }
+    .alt-btn {
+        background: none; border: none; font-weight: 700; font-size: 0.85rem; padding: 6px 12px; letter-spacing: 0.5px; cursor: pointer; text-decoration: none; border-radius: 3px;
+    }
+    .alt-btn.active { background: #e30613; color: white !important; }
+    .alt-btn:not(.active) { color: #555; background: #e8e2d8; }
+    .alt-btn:hover { text-decoration: none; }
 
     /* Movie Card Grid */
     .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
@@ -43,111 +51,59 @@
         <span>›</span>
         <span>Phim</span>
         <span>›</span>
-        <span style="color: #e30613; font-weight: 600;">Phim Đang Chiếu</span>
+        <span style="color: #e30613; font-weight: 600;">@(isUpcoming ? "Phim Sắp Chiếu" : "Phim Đang Chiếu")</span>
     </nav>
 
     <!-- Heading row -->
     <div class="title-row">
-        <h1>PHIM ĐANG CHIẾU</h1>
-        <a href="#sap-chieu" class="alt-btn">PHIM SẮP CHIẾU ›</a>
+        <h1>@(isUpcoming ? "PHIM SẮP CHIẾU" : "PHIM ĐANG CHIẾU")</h1>
+        <div class="tab-switch">
+            <a asp-controller="Movie" asp-action="Index" asp-route-tab="now-showing" class="alt-btn @(!isUpcoming ? "active" : "")">Đang Chiếu</a>
+            <a asp-controller="Movie" asp-action="Index" asp-route-tab="upcoming" class="alt-btn @(isUpcoming ? "active" : "")">Sắp Chiếu</a>
+        </div>
     </div>
 
     <!-- Grid -->
     <div class="grid-4">
-        <!-- Card 1 -->
-        <div class="movie-card">
-            <a asp-controller="Movie" asp-action="Detail" asp-route-id="1" class="movie-poster-wrap">
-                <div class="rating-badge" style="background: #2e7d32;">T16</div>
-                <img src="https://images.unsplash.com/photo-1568038479111-87bf80659645?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400" alt="Lật Mặt 7: Một Điều Ước">
-            </a>
-            <div class="movie-info">
-                <div>
-                    <a asp-controller="Movie" asp-action="Detail" asp-route-id="1" class="movie-title">Lật Mặt 7: Một Điều Ước</a>
-                    <div class="meta-text" style="margin-top: 6px;">
-                        <span><strong>121</strong> phút</span>
-                        <span>|</span>
-                        <span>Khởi chiếu: 05/10/2026</span>
+        @if (Model != null && Model.Any())
+        {
+            @foreach (var m in Model)
+            {
+                <div class="movie-card">
+                    <a asp-controller="Movie" asp-action="Detail" asp-route-id="@m.Id" class="movie-poster-wrap">
+                        <div class="rating-badge" style="background: @m.RatingColor;">@m.Rating</div>
+                        @if (!string.IsNullOrEmpty(m.SpecialTag))
+                        {
+                            <div class="format-badge">@m.SpecialTag</div>
+                        }
+                        <img src="@m.PosterUrl" alt="@m.Title" onerror="this.src='https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400'">
+                    </a>
+                    <div class="movie-info">
+                        <div>
+                            <a asp-controller="Movie" asp-action="Detail" asp-route-id="@m.Id" class="movie-title">@m.Title</a>
+                            <div class="meta-text" style="margin-top: 6px;">
+                                <span><strong>@m.Duration</strong> phút</span>
+                                <span>|</span>
+                                <span>Khởi chiếu: @m.ReleaseDate.ToString("dd/MM/yyyy")</span>
+                            </div>
+                        </div>
+                        @if (m.IsNowShowing && !m.IsUpcoming && ViewBag.ActiveTab != "upcoming")
+                        {
+                            <a asp-controller="Booking" asp-action="Index" asp-route-movieId="@m.Id" class="btn-buy">MUA VÉ</a>
+                        }
+                        else
+                        {
+                            <a asp-controller="Movie" asp-action="Detail" asp-route-id="@m.Id" class="btn-buy" style="background: #1565c0;">XEM CHI TIẾT</a>
+                        }
                     </div>
                 </div>
-                <a asp-controller="Booking" asp-action="Index" asp-route-movieId="1" class="btn-buy">MUA VÉ</a>
+            }
+        }
+        else
+        {
+            <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px; background: white; border-radius: 6px;">
+                <p style="font-size: 1.1rem; color: #777;">Hiện tại chưa có phim trong danh mục này.</p>
             </div>
-        </div>
-
-        <!-- Card 2 -->
-        <div class="movie-card">
-            <a asp-controller="Movie" asp-action="Detail" asp-route-id="2" class="movie-poster-wrap">
-                <div class="rating-badge" style="background: #b71c1c;">T18</div>
-                <div class="format-badge">IMAX</div>
-                <img src="https://images.unsplash.com/photo-1778973812223-e5079431fa47?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400" alt="Vùng Bắt Quỷ Dữ">
-            </a>
-            <div class="movie-info">
-                <div>
-                    <a asp-controller="Movie" asp-action="Detail" asp-route-id="2" class="movie-title">Vùng Bắt Quỷ Dữ</a>
-                    <div class="meta-text" style="margin-top: 6px;">
-                        <span><strong>94</strong> phút</span>
-                        <span>|</span>
-                        <span>Khởi chiếu: 12/11/2026</span>
-                    </div>
-                </div>
-                <a asp-controller="Booking" asp-action="Index" asp-route-movieId="2" class="btn-buy">MUA VÉ</a>
-            </div>
-        </div>
-
-        <!-- Card 3 -->
-        <div class="movie-card">
-            <a asp-controller="Movie" asp-action="Detail" asp-route-id="3" class="movie-poster-wrap">
-                <div class="rating-badge" style="background: #b71c1c;">T18</div>
-                <img src="https://images.unsplash.com/photo-1651627567991-e4ec7b8fc72c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400" alt="Tế Vật Cải Mệnh">
-            </a>
-            <div class="movie-info">
-                <div>
-                    <a asp-controller="Movie" asp-action="Detail" asp-route-id="3" class="movie-title">Tế Vật Cải Mệnh</a>
-                    <div class="meta-text" style="margin-top: 6px;">
-                        <span><strong>110</strong> phút</span>
-                        <span>|</span>
-                        <span>Khởi chiếu: 01/10/2026</span>
-                    </div>
-                </div>
-                <a asp-controller="Booking" asp-action="Index" asp-route-movieId="3" class="btn-buy">MUA VÉ</a>
-            </div>
-        </div>
-
-        <!-- Card 4 -->
-        <div class="movie-card">
-            <a asp-controller="Movie" asp-action="Detail" asp-route-id="4" class="movie-poster-wrap">
-                <div class="rating-badge" style="background: #e65100;">T13</div>
-                <img src="https://images.unsplash.com/photo-1609062757924-6c2d01b3b422?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400" alt="Kỳ Nghỉ Hè Nhớ Đời">
-            </a>
-            <div class="movie-info">
-                <div>
-                    <a asp-controller="Movie" asp-action="Detail" asp-route-id="4" class="movie-title">Kỳ Nghỉ Hè Nhớ Đời</a>
-                    <div class="meta-text" style="margin-top: 6px;">
-                        <span><strong>105</strong> phút</span>
-                        <span>|</span>
-                        <span>Khởi chiếu: 25/09/2026</span>
-                    </div>
-                </div>
-                <a asp-controller="Booking" asp-action="Index" asp-route-movieId="4" class="btn-buy">MUA VÉ</a>
-            </div>
-        </div>
-
-        <!-- Card 5 -->
-        <div class="movie-card">
-            <a asp-controller="Movie" asp-action="Detail" asp-route-id="5" class="movie-poster-wrap">
-                <div class="rating-badge" style="background: #1565c0;">K</div>
-                <img src="https://images.unsplash.com/photo-1534447677768-be436bb09401?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400" alt="Phiêu Lưu Cùng Bé">
-            </a>
-            <div class="movie-info">
-                <div>
-                    <a asp-controller="Movie" asp-action="Detail" asp-route-id="5" class="movie-title">Phiêu Lưu Cùng Bé</a>
-                    <div class="meta-text" style="margin-top: 6px;">
-                        <span><strong>90</strong> phút</span>
-                        <span>|</span>
-                        <span>Khởi chiếu: 20/10/2026</span>
-                    </div>
-                </div>
-                <a asp-controller="Booking" asp-action="Index" asp-route-movieId="5" class="btn-buy">MUA VÉ</a>
-            </div>
-        </div>
+        }
     </div>
 </main>

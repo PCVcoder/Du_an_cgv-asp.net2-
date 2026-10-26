@@ -1,0 +1,160 @@
+====================================================================================================
+PROMPT AI: HƯỚNG DẪN AI VIẾT BÁO CÁO TOÀN DIỆN CHO ĐỒ ÁN / DỰ ÁN HỆ THỐNG ĐẶT VÉ XEM PHIM CGV
+====================================================================================================
+(Bạn chỉ cần sao chép toàn bộ nội dung từ dòng dưới đây và dán vào ChatGPT / Claude / Gemini / DeepSeek)
+----------------------------------------------------------------------------------------------------
+
+Chào bạn, tôi đang thực hiện và cần viết một bản BÁO CÁO ĐỒ ÁN / KHÓA LUẬN / BÁO CÁO KỸ THUẬT chi tiết, hoàn chỉnh và mang tính học thuật cao cho dự án phần mềm của tôi.
+
+Dưới đây là TOÀN BỘ THÔNG TIN CHI TIẾT VÀ BỐI CẢNH DỰ ÁN (Project Context). Hãy đóng vai một Chuyên gia Kỹ thuật Phần mềm (Senior Software Engineer) kiêm Giảng viên Công nghệ Thông tin hướng dẫn đồ án tốt nghiệp, dựa vào dữ liệu dưới đây để viết một bản Báo cáo Đồ án đầy đủ, chi tiết, chuyên nghiệp từ đầu đến cuối theo chuẩn cấu trúc đồ án đại học.
+
+----------------------------------------------------------------------------------------------------
+1. THÔNG TIN TỔNG QUAN DỰ ÁN:
+----------------------------------------------------------------------------------------------------
+- Tên đề tài: XÂY DỰNG WEBSITE ĐẶT VÉ XEM PHIM TRỰC TUYẾN THEO MÔ HÌNH HỆ THỐNG RẠP CHIẾU CGV CINEMAS
+- Nền tảng phát triển: Web Application (.NET / C#)
+- Framework Backend: ASP.NET Core MVC (Target Framework: .NET 10.0)
+- ORM: Entity Framework Core 10.0 (Code-First Migration & Automated Seeding)
+- Hệ quản trị Cơ sở dữ liệu: Microsoft SQL Server (ApplicationDbContext)
+- Bảo mật & Phân quyền: ASP.NET Core Identity (Hỗ trợ Role-based: "Admin" và "Customer"), Cookie Authentication tùy biến thời gian hết hạn phiên, mã hóa mật khẩu Identity an toàn.
+- Frontend & Giao diện: Razor View Engine (.cshtml), CSS3 tùy biến theo phong cách nhận diện CGV (CGV Red #e71a0f, Dark Cinema background, Gold accents, Glassmorphism, hiệu ứng chuyển động tương tác mượt mà), Bootstrap Icons, FontAwesome, JavaScript tương tác chọn ghế và tính tiền theo thời gian thực.
+- Kiến trúc phần mềm: Mô hình MVC (Model - View - Controller), Dependency Injection, Data Transfer Objects / ViewModels, Repository pattern tích hợp qua DbContext.
+
+----------------------------------------------------------------------------------------------------
+2. BỐ CỤC BẢNG CƠ SỞ DỮ LIỆU (DATABASE ENTITIES & SCHEMA):
+----------------------------------------------------------------------------------------------------
+1. ApplicationUser (kế thừa IdentityUser): Quản lý người dùng, mở rộng thêm FullName, RewardPoints (điểm tích lũy), MemberTier (hạng VIP/VVIP), FavoriteCinema (rạp yêu thích), City.
+2. Movie (Phim): Quản lý danh mục phim, tiêu đề (Title), đạo diễn (Director), diễn viên (Cast), thể loại (Genre), thời lượng (DurationMinutes), ngày khởi chiếu (ReleaseDate), mô tả tóm tắt (Description), link Poster (PosterUrl), link Trailer YouTube (TrailerUrl), phân loại độ tuổi (AgeRating: P, C13, C16, C18), định dạng chiếu (Format: 2D, 3D, IMAX, 4DX), cờ IsNowShowing (Đang chiếu), IsUpcoming (Sắp chiếu), Rank (thứ hạng).
+3. Cinema (Cụm rạp): Tên cụm rạp CGV (Name), địa chỉ (Address), Tỉnh/Thành phố (City - hỗ trợ 33+ tỉnh thành toàn quốc), số điện thoại hotline (Phone), mô tả (Description), ảnh đại diện rạp (ImageUrl).
+4. CinemaHall (Phòng chiếu): Thuộc rạp nào (CinemaId), tên phòng (Name - VD: Cinema 01, IMAX Hall), tổng số ghế (TotalSeats), loại phòng (HallType). Quan hệ Cascade delete với Cinema.
+5. Seat (Ghế ngồi): Thuộc phòng chiếu nào (CinemaHallId), mã ghế (SeatNumber: A01, B05, C08...), Hàng (Row), Cột/Số (Number), Loại ghế (SeatType: Ghế thường, Ghế VIP, Ghế Sweetbox/Đôi), Phụ thu giá ghế (PriceModifier - VIP phụ thu 15.000 VNĐ).
+6. Showtime (Suất chiếu): Phim được chiếu (MovieId), Phòng chiếu (CinemaHallId), Thời gian bắt đầu (StartTime), Giá vé cơ sở (Price), Định dạng (Format). Quan hệ Cascade delete với Movie và CinemaHall.
+7. Booking (Đơn đặt vé): Mã vé định dạng chuẩn CGV (BookingCode: CGV-yyyyMMdd-XXXX), ShowtimeId, UserId (nếu đã đăng nhập, null nếu là khách vãng lai), CustomerName, CustomerEmail, CustomerPhone, Danh sách ghế đã chọn kèm bắp nước (SeatsList), Tổng tiền thanh toán (TotalAmount), Trạng thái (Status: Đã thanh toán, Đã hủy, Chờ xử lý), Phương thức thanh toán (PaymentMethod: VNPAY-QR, MoMo, Thẻ ATM), Thời gian đặt (BookingDate).
+8. FoodItem (Bắp nước / Combo ẩm thực): Tên món (Name: Bắp rang bơ, Nước ngọt, Combo My CGV...), Mô tả (Description), Giá bán (Price), Ảnh (ImageUrl), Danh mục (Category), Trạng thái khả dụng (IsAvailable), Thứ tự hiển thị (SortOrder).
+9. BookingFoodItem (Chi tiết bắp nước đặt theo vé): Bảng liên kết nhiều-nhiều giữa Booking và FoodItem, gồm BookingId (FK -> Bookings), FoodItemId (FK -> FoodItems), Số lượng (Quantity), Đơn giá tại thời điểm đặt (UnitPrice).
+10. NewsOffer (Tin tức & Khuyến mãi): Tiêu đề (Title), mô tả ngắn (Description), nội dung chi tiết (Content), ảnh banner (ImageUrl), phân loại danh mục (Category), trạng thái hiển thị (IsActive), ngày tạo (CreatedAt), liên kết Phim (MovieId, FK -> Movies), liên kết Cụm rạp (CinemaId, FK -> Cinemas), và Người đăng bài (AuthorId, FK -> AspNetUsers).
+11. ContactInquiry (Hòm thư liên hệ / Góp ý): Họ tên (FullName), Email, Số điện thoại (Phone), Tiêu đề (Subject), Nội dung thông điệp (Message), Trạng thái xử lý (Status), Ngày gửi (CreatedAt), Tài khoản người gửi (UserId, FK -> AspNetUsers).
+12. HallRentalRequest (Yêu cầu thuê rạp / Đặt vé nhóm): Họ tên (FullName), Email, Điện thoại (Phone), Rạp muốn thuê (CinemaId, FK -> Cinemas), Tài khoản người gửi (UserId, FK -> AspNetUsers), Loại sự kiện (ServiceType), Ngày dự kiến (ExpectedDate), Số lượng khách (GuestCount), Ghi chú (Notes), Trạng thái xử lý (Status), Ngày tạo (CreatedAt).
+
+----------------------------------------------------------------------------------------------------
+
+3. CÁC MODULE VÀ TÍNH NĂNG CHÍNH CỦA HỆ THỐNG:
+----------------------------------------------------------------------------------------------------
+A. Phân hệ Dành cho Khách hàng & Người dùng (Client / User Side):
+1. Trang chủ (Home): Hiển thị Banner quảng cáo phong cách rạp chiếu phim, Carousel phim nổi bật đang chiếu & sắp chiếu theo thứ hạng (Rank), danh sách ưu đãi và tin tức mới nhất.
+2. Danh mục & Chi tiết phim (Movies & Detail):
+   - Phân loại tab trực quan "Phim Đang Chiếu" và "Phim Sắp Chiếu".
+   - Trang chi tiết phim: Trình phát Trailer nhúng trực tiếp từ YouTube, thông tin chi tiết (đạo diễn, diễn viên, thời lượng, cảnh báo độ tuổi), danh sách suất chiếu động theo từng cụm rạp liên kết.
+3. Hệ thống Cụm rạp (Cinemas):
+   - Danh bạ cụm rạp CGV trải rộng 33+ tỉnh thành (Hồ Chí Minh, Hà Nội, Đà Nẵng, Cần Thơ, Hải Phòng,...).
+   - Bộ lọc rạp theo tỉnh thành, hiển thị địa chỉ, thông tin rạp, bảng lịch chiếu phim trực tiếp tại rạp đã chọn.
+4. Quy trình Đặt vé & Chọn ghế trực tuyến (Online Booking Flow):
+   - Bước 1: Chọn Phim -> Chọn Cụm Rạp -> Chọn Ngày & Suất chiếu phù hợp (hệ thống tự động lọc các suất chiếu khả dụng).
+   - Bước 2: Sơ đồ phòng chiếu trực quan (Seat Matrix): Hiển thị trạng thái ghế trống, ghế VIP (hàng C, D có gắn thẻ phụ thu), ghế Sweetbox đôi, và các ghế ĐÃ CÓ NGƯỜI ĐẶT (Disable không cho click, tự động loại trừ từ các đơn đặt vé trước đó).
+   - Bước 3: Đặt kèm Bắp nước / Combo ẩm thực (Food & Beverage Menu): Cho phép khách hàng thêm bắp phô mai, caramel, nước ngọt, combo với giá ưu đãi.
+   - Bước 4: Tự động tính toán tổng chi phí (Tiền vé + Phụ thu VIP + Tổng tiền bắp nước) theo thời gian thực (Real-time Calculation).
+   - Bước 5: Điền thông tin người nhận vé (Tự động điền nếu đã đăng nhập thành viên, hoặc cho phép khách vãng lai điền Họ tên, SĐT, Email).
+   - Bước 6: Chọn cổng thanh toán mô phỏng (VNPAY-QR, MoMo, Thẻ quốc tế Visa/Master, Thẻ ATM nội địa).
+   - Bước 7: Xác nhận đặt vé, sinh mã vé CGV chuẩn, lưu thông tin vào CSDL, đồng thời ghi nhớ Cookie mã vé gần nhất để khách vãng lai không bị mất thông tin vé.
+5. Tra cứu Vé của tôi (My Tickets):
+   - Khách hàng đã đăng nhập có thể xem toàn bộ lịch sử vé xem phim của mình.
+   - Khách vãng lai có thể tra cứu nhanh thông qua Mã đặt vé (Booking Code), Số điện thoại hoặc Email.
+   - Hiển thị chi tiết vé với Mã QR Code mô phỏng (dùng để quét tại cửa soát vé rạp), thời gian chiếu, tên phòng chiếu, số ghế và combo bắp nước đi kèm.
+6. Dịch vụ Thuê rạp & Sự kiện đặc biệt (Hall Rental):
+   - Biểu mẫu trực tuyến gửi yêu cầu thuê phòng chiếu riêng tư, tổ chức hội thảo doanh nghiệp, tiệc sinh nhật.
+7. Dịch vụ Phòng chiếu cao cấp (L'Amour Suite):
+   - Giới thiệu trải nghiệm phòng chiếu giường nằm hạng sang CGV L'Amour với tiện ích trà, cà phê và đồ ăn nhẹ miễn phí.
+8. Tin tức & Khuyến mãi (News & Offers):
+   - Tin tức điện ảnh, ưu đãi độc quyền thành viên U22, thứ 4 vui vẻ Happy Wednesday, quà tặng CGV.
+9. Quản lý Tài khoản & Điểm thưởng thành viên (Account Management):
+   - Đăng ký tài khoản, đăng nhập an toàn, đăng xuất.
+   - Quản lý trang hồ sơ cá nhân: Xem thông tin cá nhân, cập nhật rạp yêu thích, quản lý Hạng thành viên (Member, VIP, VVIP).
+   - Cơ chế tích điểm tự động: Cứ mỗi 1.000 VNĐ thanh toán vé thành công, hệ thống tự động tích lũy 1 điểm thưởng (Reward Points) vào tài khoản người dùng.
+10. Liên hệ & Hỗ trợ khách hàng (Contact Us):
+   - Gửi phản hồi, khiếu nại, góp ý dịch vụ tới ban quản lý hệ thống.
+
+B. Phân hệ Dành cho Quản trị viên (Admin Portal - Role: "Admin"):
+1. Dashboard thống kê tổng quan (Admin Dashboard):
+   - Đo lường và trực quan hóa các chỉ số quan trọng (KPIs): Tổng doanh thu (VNĐ), Tổng số vé đã bán, Tổng số phim đang chiếu, Tổng số rạp hoạt động, Tổng số suất chiếu, Số lượng liên hệ mới chưa xử lý, Số lượng đơn thuê rạp mới.
+2. Quản lý Danh mục Phim (Movies CRUD):
+   - Thêm phim mới, chỉnh sửa thông tin, tải lên poster, trailer URL, đặt lịch chiếu/sắp chiếu, sắp xếp thứ hạng ưu tiên, xóa phim.
+3. Quản lý Cụm Rạp & Phòng chiếu (Cinemas & Halls Management):
+   - Thêm rạp mới theo tỉnh thành, cập nhật địa chỉ, hotline, quản lý danh sách phòng chiếu và loại công nghệ chiếu (2D, 3D, IMAX, 4DX, ScreenX).
+4. Quản lý Suất chiếu (Showtimes Management):
+   - Lập lịch chiếu phim linh hoạt: Chọn phim, chọn rạp, chọn phòng chiếu, ngày giờ bắt đầu và thiết lập đơn giá vé.
+5. Quản lý Thực đơn Bắp nước (Food Items CRUD):
+   - Thêm mới combo bắp nước, định giá, tải ảnh, phân loại đồ ăn/uống, quản lý trạng thái còn hàng/hết hàng.
+6. Quản lý Khuyến mãi & Tin tức (News & Promos CRUD):
+   - Đăng bài viết khuyến mãi, sự kiện, banner ưu đãi, kích hoạt hoặc tạm ẩn chương trình.
+7. Quản lý Đơn đặt vé (Bookings Management):
+   - Theo dõi toàn bộ danh sách vé được đặt trong hệ thống, lọc thông tin khách hàng, kiểm tra trạng thái thanh toán, hủy vé khi cần thiết.
+8. Quản lý Liên hệ & Yêu cầu thuê rạp:
+   - Tiếp nhận thông tin góp ý và form thuê rạp của khách hàng, cập nhật tiến độ xử lý ("Mới tiếp nhận", "Đã liên hệ tư vấn", "Hoàn tất").
+9. Khởi tạo & Đổ dữ liệu mẫu tự động (DbInitializer):
+   - Tự động kiểm tra và tạo tài khoản Quản trị mặc định (admin@cgv.vn / Mật khẩu: Admin@123456).
+   - Tự động nạp sẵn dữ liệu hàng chục cụm rạp trên toàn quốc, danh sách phim chiếu rạp mới nhất, các suất chiếu mẫu, danh mục bắp nước và các bài viết ưu đãi chuẩn nhận diện CGV.
+
+----------------------------------------------------------------------------------------------------
+4. YÊU CẦU ĐỐI VỚI BẢN BÁO CÁO CỦA BẠN:
+----------------------------------------------------------------------------------------------------
+Hãy soạn thảo toàn bộ bản báo cáo một cách mạch lạc, văn phong trang trọng, học thuật, đầy đủ thuật ngữ chuyên ngành công nghệ thông tin và kỹ thuật phần mềm. Báo cáo cần bao gồm các chương mục sau:
+
+LỜI MỞ ĐẦU & LỜI CẢM ƠN
+MỤC LỤC & DANH MỤC THUẬT NGỮ VIẾT TẮT
+
+CHƯƠNG 1: TỔNG QUAN VỀ ĐỀ TÀI VÀ BÀI TOÁN THỰC TẾ
+1.1. Lý do chọn đề tài (Bối cảnh chuyển đổi số trong ngành giải trí điện ảnh, nhu cầu đặt vé trực tuyến không dùng tiền mặt).
+1.2. Mục tiêu nghiên cứu và phát triển của đề tài (Xây dựng hệ thống web đặt vé trực quan, hiện đại, tối ưu trải nghiệm người dùng).
+1.3. Đối tượng và phạm vi nghiên cứu (Quy trình bán vé rạp chiếu phim, khách hàng đại chúng và đội ngũ quản trị rạp).
+1.4. Ý nghĩa thực tiễn và tính cấp thiết của đề tài.
+
+CHƯƠNG 2: CƠ SỞ LÝ THUYẾT VÀ CÔNG NGHỆ ÁP DỤNG
+2.1. Nền tảng .NET 10.0 và C# hiện đại (Hiệu năng cao, cross-platform, type-safety).
+2.2. Kiến trúc ASP.NET Core MVC (Tách biệt Concerns: Model, View, Controller; vòng đời xử lý Request/Response).
+2.3. Công nghệ ánh xạ cơ sở dữ liệu Entity Framework Core 10 (Code-First approach, LINQ queries, DbContext, Migration).
+2.4. Hệ quản trị cơ sở dữ liệu Microsoft SQL Server (Tính toàn vẹn dữ liệu, quan hệ khóa ngoại, ràng buộc Cascade).
+2.5. Cơ chế xác thực và phân quyền với ASP.NET Core Identity (Role-based Authorization: Admin vs Customer, Password Hashing, Cookie Session).
+2.6. Thiết kế giao diện người dùng (Razor View, Responsive Web Design, CSS3 Design Tokens theo chuẩn CGV, JavaScript tương tác không cần tải lại toàn bộ trang).
+
+CHƯƠNG 3: PHÂN TÍCH VÀ THIẾT KẾ HỆ THỐNG
+3.1. Phân tích yêu cầu chức năng (Functional Requirements cho Khách hàng vãng lai, Thành viên và Quản trị viên).
+3.2. Phân tích yêu cầu phi chức năng (Non-functional Requirements: Hiệu năng, Bảo mật dữ liệu, Độ phản hồi, Khả năng mở rộng).
+3.3. Biểu đồ Use Case tổng quát và các Use Case chi tiết (Use Case Đặt vé & Chọn ghế, Use Case Quản lý phim & Suất chiếu, Use Case Thống kê doanh thu).
+3.4. Thiết kế cơ sở dữ liệu (Chi tiết các bảng dữ liệu, kiểu dữ liệu, khóa chính, khóa ngoại, quan hệ 1-N giữa Cinema - CinemaHall - Seat - Showtime - Booking).
+3.5. Biểu đồ hoạt động (Activity Diagram) hoặc Biểu đồ tuần tự (Sequence Diagram) cho luồng nghiệp vụ quan trọng nhất: QUY TRÌNH ĐẶT VÉ VÀ GIỮ CHỖ TRỰC TUYẾN (Từ chọn suất chiếu -> Chọn ghế -> Chọn bắp nước -> Tính tiền -> Sinh mã vé CGV -> Xuất mã vé QR).
+
+CHƯƠNG 4: HIỆN THỰC HÓA VÀ TRIỂN KHAI HỆ THỐNG
+4.1. Cấu trúc tổ chức thư mục của dự án (Controllers, Models, Views, Data, ViewModels, wwwroot).
+4.2. Hiện thực các chức năng phía Khách hàng (Trang chủ, Tra cứu rạp, Chi tiết phim, Sơ đồ chọn ghế ma trận, Chọn bắp nước, Tra cứu vé của tôi qua mã vé / SĐT / Email).
+4.3. Hiện thực các chức năng phía Quản trị viên (Admin Dashboard thống kê doanh thu, CRUD Phim, Rạp, Suất chiếu, Bắp nước, Tin tức, Xử lý liên hệ & Thuê rạp).
+4.4. Cơ chế tự động khởi tạo dữ liệu mẫu (DbInitializer): Giải pháp đảm bảo hệ thống có thể chạy ngay với dữ liệu phong phú mà không cần nhập liệu thủ công từ đầu.
+4.5. Giải pháp xử lý các bài toán kỹ thuật đặc thù:
+     - Bài toán chống đặt trùng ghế (Occupied seats exclusion theo từng suất chiếu).
+     - Bài toán phân định ghế VIP và ghế thường để tự động cộng phụ thu.
+     - Bài toán hỗ trợ khách vãng lai đặt vé thông qua Cookie lưu mã vé tạm thời.
+     - Bài toán tính điểm thưởng thành viên (Reward Points).
+
+CHƯƠNG 5: KIỂM THỬ VÀ ĐÁNH GIÁ KẾT QUẢ
+5.1. Kế hoạch và phương pháp kiểm thử (Kiểm thử hộp đen - Black-box Testing, Kiểm thử chức năng).
+5.2. Bảng ca kiểm thử chi tiết (Test Cases) cho các tính năng trọng yếu:
+     - Test Case 1: Đăng ký & Đăng nhập tài khoản.
+     - Test Case 2: Luồng đặt vé xem phim và kiểm tra loại trừ ghế đã đặt.
+     - Test Case 3: Thêm bắp nước và kiểm tra độ chính xác của tổng tiền thanh toán.
+     - Test Case 4: Kiểm tra phân quyền truy cập trang Quản trị (Admin Controller) khi chưa đăng nhập quyền Admin.
+     - Test Case 5: Tra cứu vé trong "Vé của tôi".
+5.3. Đánh giá kết quả đạt được so với mục tiêu ban đầu.
+
+CHƯƠNG 6: KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN
+6.1. Những kết quả đã đạt được của đề tài (Hệ thống hoạt động trơn tru, giao diện đẹp mắt đúng chuẩn nhận diện CGV, đáp ứng trọn vẹn luồng nghiệp vụ vé rạp chiếu phim).
+6.2. Các mặt hạn chế còn tồn tại (Mô phỏng thanh toán chưa tích hợp trực tiếp qua Webhook VNPAY thực tế, chưa có hệ thống thông báo đẩy Push Notification).
+6.3. Hướng nghiên cứu và phát triển tương lai (Tích hợp API cổng thanh toán thật VNPAY / MoMo Sandbox, Xây dựng ứng dụng di động Mobile App quét vé QR Code bằng Flutter/React Native, Tích hợp hệ sinh thái AI Chatbot hỗ trợ tư vấn chọn phim).
+
+TÀI LIỆU THAM KHẢO
+
+----------------------------------------------------------------------------------------------------
+QUY TẮC PHẢN HỒI CỦA BẠN:
+- Hãy bắt đầu viết chi tiết, đầy đủ từng chương, không tóm tắt sơ sài, không viết lướt ("vân vân...").
+- Sử dụng bảng biểu Markdown (Markdown Tables) cho các phần: Thiết kế bảng dữ liệu CSDL, Bảng ca kiểm thử (Test Cases), Bảng yêu cầu chức năng.
+- Chèn các đoạn code C# / Razor mẫu tiêu biểu lấy từ kiến trúc dự án (ví dụ logic lọc ghế đã đặt trong BookingController, cấu hình quan hệ OnModelCreating trong ApplicationDbContext) để minh họa cho phần hiện thực hóa.
+- Hãy bắt đầu viết từ Lời Mở Đầu và Chương 1, Chương 2 ngay bây giờ!
+====================================================================================================
