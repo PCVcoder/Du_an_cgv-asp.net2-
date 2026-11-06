@@ -1617,6 +1617,14 @@ namespace Du_an_CGV.Data
                     BEGIN
                         ALTER TABLE [NewsOffers] ADD [IsDeleted] bit NOT NULL DEFAULT 0;
                     END
+
+                    -- Đảm bảo không có NULL hoặc lỗi font cho các cột mới thêm trong HallRentalRequests
+                    UPDATE [HallRentalRequests] SET [BookingMode] = N'Bao trọn phòng (Khóa suất)' WHERE [BookingMode] IS NULL OR [BookingMode] LIKE N'%Tr%n%' OR [BookingMode] LIKE N'%?%';
+                    UPDATE [HallRentalRequests] SET [TimeSlot] = N'Ca chiều (13:30 - 17:30)' WHERE [TimeSlot] IS NULL OR [TimeSlot] LIKE N'%chi%u%' OR [TimeSlot] LIKE N'%?%';
+                    UPDATE [HallRentalRequests] SET [MovieTitle] = N'Tự chiếu nội bộ (Slide / Clip / Hội thảo)' WHERE [MovieTitle] IS NULL OR [MovieTitle] LIKE N'%chi%u%' OR [MovieTitle] LIKE N'%?%';
+                    UPDATE [HallRentalRequests] SET [AllocatedHalls] = N'' WHERE [AllocatedHalls] IS NULL;
+                    UPDATE [HallRentalRequests] SET [IsHoldLocked] = 0 WHERE [IsHoldLocked] IS NULL;
+                    UPDATE [HallRentalRequests] SET [IsDeleted] = 0 WHERE [IsDeleted] IS NULL;
                 ");
             }
             catch

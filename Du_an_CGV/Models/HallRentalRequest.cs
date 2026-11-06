@@ -66,7 +66,7 @@ namespace Du_an_CGV.Models
         public string? MovieTitle { get; set; }
 
         [Display(Name = "Hình thức đặt")]
-        public string BookingMode { get; set; } = "Bao trọn phòng (Khóa suất)"; // "Bao trọn phòng (Khóa suất)", "Ghép suất (Giữ N ghế đoàn)", "Hội thảo / Sự kiện doanh nghiệp"
+        public string? BookingMode { get; set; } = "Bao trọn phòng (Khóa suất)"; // "Bao trọn phòng (Khóa suất)", "Ghép suất (Giữ N ghế đoàn)", "Hội thảo / Sự kiện doanh nghiệp"
 
         [Display(Name = "Khóa giữ chỗ tạm thời")]
         public bool IsHoldLocked { get; set; } = false;
