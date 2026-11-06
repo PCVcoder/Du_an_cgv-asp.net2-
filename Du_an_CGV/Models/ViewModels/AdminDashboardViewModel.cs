@@ -30,5 +30,7 @@ namespace Du_an_CGV.Models.ViewModels
         public List<FoodItem> FoodItems { get; set; } = new();
         public List<AdminActionLog> ActionLogs { get; set; } = new();
         public List<string> Provinces { get; set; } = new();
+        public List<MemberTier> MemberTiers { get; set; } = new();
+        public List<SeatHold> ActiveSeatHolds { get; set; } = new();
     }
 }

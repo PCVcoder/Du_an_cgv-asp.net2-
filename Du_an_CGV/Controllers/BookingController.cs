@@ -172,10 +172,22 @@ namespace Du_an_CGV.Controllers
                     : showtimes.FirstOrDefault();
             }
 
-            // Find occupied seats for this showtime
+            // Dọn dẹp các ghế giữ chỗ đã quá 5 phút
+            await CleanExpiredHoldsAsync();
+
+            // Find occupied seats and held seats for this showtime
             var occupiedSeats = new List<string>();
+            var heldByOtherSeats = new List<string>();
+            var myHeldSeats = new List<string>();
+            int myRemainingSeconds = 0;
+
+            var currentUser = (User.Identity != null && User.Identity.IsAuthenticated)
+                ? await _userManager.GetUserAsync(User)
+                : null;
+
             if (selectedShowtime != null)
             {
+                // Ghế đã thanh toán chính thức
                 var bookings = await _context.Bookings
                     .Where(b => b.ShowtimeId == selectedShowtime.Id && b.Status != "Đã hủy")
                     .Select(b => b.SeatsList)
@@ -188,6 +200,41 @@ namespace Du_an_CGV.Controllers
                     var split = cleanSeatPart.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
                     occupiedSeats.AddRange(split);
                 }
+
+                // Ghế đang giữ chỗ 5 phút (SeatHolds / GIUCHO)
+                var activeHolds = await _context.SeatHolds
+                    .Where(h => h.ShowtimeId == selectedShowtime.Id && h.ExpiresAt > DateTime.Now)
+                    .ToListAsync();
+
+                foreach (var hold in activeHolds)
+                {
+                    if (currentUser != null && hold.UserId == currentUser.Id)
+                    {
+                        myHeldSeats.Add(hold.SeatCode);
+                        var rem = (int)(hold.ExpiresAt - DateTime.Now).TotalSeconds;
+                        if (rem > myRemainingSeconds) myRemainingSeconds = rem;
+                    }
+                    else
+                    {
+                        heldByOtherSeats.Add(hold.SeatCode);
+                    }
+                }
+            }
+
+            // Tính ưu đãi cấp bậc thành viên CGV
+            decimal memberDiscountPercent = 0;
+            string memberTierName = "Thành viên Thường";
+            string memberBadgeColor = "#607d8b";
+            if (currentUser != null)
+            {
+                var tier = await _context.MemberTiers.FirstOrDefaultAsync(t => t.Id == currentUser.MemberTierId)
+                           ?? await _context.MemberTiers.OrderByDescending(t => t.MinPoints).FirstOrDefaultAsync(t => currentUser.RewardPoints >= t.MinPoints);
+                if (tier != null)
+                {
+                    memberDiscountPercent = tier.DiscountPercent;
+                    memberTierName = tier.TierName;
+                    memberBadgeColor = tier.BadgeColor;
+                }
             }
 
             ViewBag.Movies = movies;
@@ -197,6 +244,12 @@ namespace Du_an_CGV.Controllers
             ViewBag.Showtimes = showtimes;
             ViewBag.SelectedShowtime = selectedShowtime;
             ViewBag.OccupiedSeats = occupiedSeats.Distinct().ToList();
+            ViewBag.HeldByOtherSeats = heldByOtherSeats.Distinct().ToList();
+            ViewBag.MyHeldSeats = myHeldSeats.Distinct().ToList();
+            ViewBag.MyRemainingSeconds = myRemainingSeconds;
+            ViewBag.MemberDiscountPercent = memberDiscountPercent;
+            ViewBag.MemberTierName = memberTierName;
+            ViewBag.MemberBadgeColor = memberBadgeColor;
 
             var foodItems = await _context.FoodItems
                 .Where(f => f.IsAvailable)
@@ -218,6 +271,144 @@ namespace Du_an_CGV.Controllers
             }
 
             return View(selectedMovie);
+        }
+
+        private async Task CleanExpiredHoldsAsync()
+        {
+            try
+            {
+                var now = DateTime.Now;
+                var expiredHolds = await _context.SeatHolds
+                    .Where(h => h.ExpiresAt <= now)
+                    .ToListAsync();
+                if (expiredHolds.Any())
+                {
+                    _context.SeatHolds.RemoveRange(expiredHolds);
+                    await _context.SaveChangesAsync();
+                }
+            }
+            catch
+            {
+                // Silent fail
+            }
+        }
+
+        // POST: /Booking/HoldSeats (AJAX - Giữ chỗ trong 5 phút)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize]
+        public async Task<IActionResult> HoldSeats(int showtimeId, string seatsList)
+        {
+            await CleanExpiredHoldsAsync();
+
+            if (string.IsNullOrWhiteSpace(seatsList))
+            {
+                return Json(new { success = false, message = "Vui lòng chọn ít nhất 1 ghế ngồi!" });
+            }
+
+            var showtime = await _context.Showtimes.FindAsync(showtimeId);
+            if (showtime == null)
+            {
+                return Json(new { success = false, message = "Suất chiếu không tồn tại hoặc đã bị hủy!" });
+            }
+
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Json(new { success = false, message = "Vui lòng đăng nhập tài khoản thành viên để giữ chỗ!" });
+            }
+
+            var requestedSeats = seatsList.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            // 1. Kiểm tra ghế đã có người thanh toán chính thức chưa
+            var bookings = await _context.Bookings
+                .Where(b => b.ShowtimeId == showtimeId && b.Status != "Đã hủy")
+                .Select(b => b.SeatsList)
+                .ToListAsync();
+
+            var bookedSeatSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var b in bookings)
+            {
+                var cleanSeatPart = b.Split('(')[0];
+                foreach (var s in cleanSeatPart.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    bookedSeatSet.Add(s);
+                }
+            }
+
+            foreach (var seat in requestedSeats)
+            {
+                if (bookedSeatSet.Contains(seat))
+                {
+                    return Json(new { success = false, message = $"Ghế {seat} đã có người đặt và thanh toán thành công! Vui lòng chọn ghế khác." });
+                }
+            }
+
+            // 2. Kiểm tra ghế có đang được KHÁCH HÀNG KHÁC giữ chỗ trong 5 phút hay không
+            var now = DateTime.Now;
+            var otherHolds = await _context.SeatHolds
+                .Where(h => h.ShowtimeId == showtimeId && h.ExpiresAt > now && h.UserId != user.Id)
+                .ToListAsync();
+
+            var heldSeatSet = new HashSet<string>(otherHolds.Select(h => h.SeatCode), StringComparer.OrdinalIgnoreCase);
+            foreach (var seat in requestedSeats)
+            {
+                if (heldSeatSet.Contains(seat))
+                {
+                    return Json(new { success = false, message = $"Ghế {seat} đang được người khác giữ chỗ trong 5 phút! Vui lòng chọn ghế khác." });
+                }
+            }
+
+            // 3. Xóa các lượt giữ chỗ cũ của người dùng này cho cùng suất chiếu
+            var myOldHolds = await _context.SeatHolds
+                .Where(h => h.ShowtimeId == showtimeId && h.UserId == user.Id)
+                .ToListAsync();
+            _context.SeatHolds.RemoveRange(myOldHolds);
+
+            // 4. Tạo bản ghi giữ chỗ mới trong đúng 5 phút (GIUCHO)
+            var expiresAt = now.AddMinutes(5);
+            foreach (var seat in requestedSeats)
+            {
+                _context.SeatHolds.Add(new SeatHold
+                {
+                    ShowtimeId = showtimeId,
+                    SeatCode = seat,
+                    UserId = user.Id,
+                    ExpiresAt = expiresAt,
+                    CreatedAt = now
+                });
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Json(new
+            {
+                success = true,
+                message = "Hệ thống đã giữ chỗ thành công trong 5 phút!",
+                expiresAt = expiresAt.ToString("o"),
+                remainingSeconds = 300
+            });
+        }
+
+        // POST: /Booking/ReleaseHolds (AJAX - Hủy giữ chỗ khi khách đổi ý hoặc đóng modal)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize]
+        public async Task<IActionResult> ReleaseHolds(int showtimeId)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user != null)
+            {
+                var myHolds = await _context.SeatHolds
+                    .Where(h => h.ShowtimeId == showtimeId && h.UserId == user.Id)
+                    .ToListAsync();
+                if (myHolds.Any())
+                {
+                    _context.SeatHolds.RemoveRange(myHolds);
+                    await _context.SaveChangesAsync();
+                }
+            }
+            return Json(new { success = true });
         }
 
         // POST: /Booking/ConfirmBooking
@@ -266,6 +457,13 @@ namespace Du_an_CGV.Controllers
                 return RedirectToAction("Index");
             }
 
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                TempData["ErrorMessage"] = "Không tìm thấy thông tin tài khoản người dùng!";
+                return RedirectToAction("Index", new { showtimeId });
+            }
+
             var seatArray = seatsList.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             if (seatArray.Length == 0)
             {
@@ -273,8 +471,23 @@ namespace Du_an_CGV.Controllers
                 return RedirectToAction("Index", new { showtimeId });
             }
 
-            // Seat price calculation + VIP surcharge
-            decimal totalAmount = 0;
+            // KIỂM TRA HIỆU LỰC GIỮ CHỖ TRONG 5 PHÚT (GIUCHO)
+            var now = DateTime.Now;
+            var myHolds = await _context.SeatHolds
+                .Where(h => h.ShowtimeId == showtime.Id && h.UserId == user.Id && h.ExpiresAt > now)
+                .ToListAsync();
+
+            var myHeldSeatCodes = new HashSet<string>(myHolds.Select(h => h.SeatCode), StringComparer.OrdinalIgnoreCase);
+            bool isHoldValid = seatArray.All(s => myHeldSeatCodes.Contains(s));
+
+            if (!isHoldValid)
+            {
+                TempData["ErrorMessage"] = "Thời gian giữ chỗ 5 phút đã hết hạn! Ghế đã được tự động giải phóng. Vui lòng chọn lại ghế để tiếp tục.";
+                return RedirectToAction("Index", new { showtimeId });
+            }
+
+            // Tính giá vé + phụ thu hàng ghế VIP
+            decimal seatTotal = 0;
             foreach (var seat in seatArray)
             {
                 decimal seatPrice = showtime.Price;
@@ -282,37 +495,41 @@ namespace Du_an_CGV.Controllers
                 {
                     seatPrice += 15000; // VIP row surcharge
                 }
-                totalAmount += seatPrice;
+                seatTotal += seatPrice;
             }
 
+            // Áp dụng chiết khấu cấp bậc thành viên (CAPBAC_THANHVIEN)
+            var userTier = await _context.MemberTiers.FirstOrDefaultAsync(t => t.Id == user.MemberTierId)
+                           ?? await _context.MemberTiers.OrderByDescending(t => t.MinPoints).FirstOrDefaultAsync(t => user.RewardPoints >= t.MinPoints);
+
+            decimal discountAmount = 0;
+            if (userTier != null && userTier.DiscountPercent > 0)
+            {
+                discountAmount = Math.Round(seatTotal * (userTier.DiscountPercent / 100m), 0);
+            }
+
+            decimal totalAmount = seatTotal - discountAmount;
             if (foodTotal > 0)
             {
                 totalAmount += foodTotal;
             }
 
             // Vietnam local time code
-            var now = DateTime.Now;
             var code = $"CGV-{now:yyyyMMdd}-{Random.Shared.Next(1000, 9999)}";
-
-            var user = await _userManager.GetUserAsync(User);
-            string? userId = user?.Id;
-            if (user != null)
-            {
-                user.RewardPoints += (int)(totalAmount / 1000); // 1 point per 1000 VND
-                await _userManager.UpdateAsync(user);
-            }
 
             var fullSeatsDescription = string.IsNullOrWhiteSpace(foodItemsSummary) 
                 ? seatsList 
                 : $"{seatsList} (+ Bắp nước: {foodItemsSummary})";
 
+            // TẠO ĐƠN VÉ CHÍNH THỨC VÀ ĐÁNH DẤU LÀ "ĐÃ THANH TOÁN"
+            // Khi thanh toán xong thì mới tính ghế đó thuộc về mình
             var booking = new Booking
             {
                 BookingCode = code,
-                UserId = userId,
-                CustomerName = string.IsNullOrWhiteSpace(customerName) ? (user?.FullName ?? "Khách Hàng CGV") : customerName.Trim(),
-                CustomerEmail = string.IsNullOrWhiteSpace(customerEmail) ? (user?.Email ?? "khachhang@cgv.vn") : customerEmail.Trim(),
-                CustomerPhone = string.IsNullOrWhiteSpace(customerPhone) ? (user?.PhoneNumber ?? "19006017") : customerPhone.Trim(),
+                UserId = user.Id,
+                CustomerName = string.IsNullOrWhiteSpace(customerName) ? (user.FullName ?? "Khách Hàng CGV") : customerName.Trim(),
+                CustomerEmail = string.IsNullOrWhiteSpace(customerEmail) ? (user.Email ?? "khachhang@cgv.vn") : customerEmail.Trim(),
+                CustomerPhone = string.IsNullOrWhiteSpace(customerPhone) ? (user.PhoneNumber ?? "19006017") : customerPhone.Trim(),
                 ShowtimeId = showtime.Id,
                 BookingDate = now,
                 SeatsList = fullSeatsDescription,
@@ -322,6 +539,25 @@ namespace Du_an_CGV.Controllers
             };
 
             _context.Bookings.Add(booking);
+
+            // Xóa bản ghi giữ chỗ tạm thời vì đã chuyển thành vé thanh toán chính thức
+            _context.SeatHolds.RemoveRange(myHolds);
+
+            // Tích điểm thưởng cho thành viên (1 điểm cho mỗi 1.000 VNĐ chi tiêu)
+            int earnedPoints = (int)(totalAmount / 1000);
+            user.RewardPoints += earnedPoints;
+
+            // Tự động thăng cấp bậc thành viên nếu đủ điểm yêu cầu
+            var allTiers = await _context.MemberTiers.OrderByDescending(t => t.MinPoints).ToListAsync();
+            var qualifyingTier = allTiers.FirstOrDefault(t => user.RewardPoints >= t.MinPoints);
+            if (qualifyingTier != null && qualifyingTier.Id != user.MemberTierId)
+            {
+                user.MemberTierId = qualifyingTier.Id;
+                user.MemberTier = qualifyingTier.TierName;
+                TempData["TierUpgradeMessage"] = $"🎉 Chúc mừng bạn đã được nâng hạng thành viên CGV: {qualifyingTier.TierName} ({qualifyingTier.DiscountPercent}% ưu đãi vé)!";
+            }
+
+            await _userManager.UpdateAsync(user);
             await _context.SaveChangesAsync();
 
             try

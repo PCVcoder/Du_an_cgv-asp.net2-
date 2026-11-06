@@ -6,7 +6,15 @@
     var movies = (List<Du_an_CGV.Models.Movie>?)ViewBag.Movies ?? new List<Du_an_CGV.Models.Movie>();
     var cinemas = (List<Du_an_CGV.Models.Cinema>?)ViewBag.Cinemas ?? new List<Du_an_CGV.Models.Cinema>();
     var showtimes = (List<Du_an_CGV.Models.Showtime>?)ViewBag.Showtimes ?? new List<Du_an_CGV.Models.Showtime>();
+    
     var occupiedSeats = (List<string>?)ViewBag.OccupiedSeats ?? new List<string>();
+    var heldByOtherSeats = (List<string>?)ViewBag.HeldByOtherSeats ?? new List<string>();
+    var myHeldSeats = (List<string>?)ViewBag.MyHeldSeats ?? new List<string>();
+    var myRemainingSeconds = (int?)ViewBag.MyRemainingSeconds ?? 0;
+
+    var memberDiscountPercent = (decimal?)ViewBag.MemberDiscountPercent ?? 0m;
+    var memberTierName = (string?)ViewBag.MemberTierName ?? "Thành viên Thường";
+    var memberBadgeColor = (string?)ViewBag.MemberBadgeColor ?? "#607d8b";
 
     var userFullName = (string?)ViewBag.UserFullName ?? "";
     var userEmail = (string?)ViewBag.UserEmail ?? "";
@@ -30,11 +38,12 @@
         width: 26px; height: 24px; padding: 0; border: 1px solid #888;
         border-radius: 3px 3px 6px 6px; background: white; color: #333;
         font-size: 0.55rem; font-weight: 700; text-align: center; line-height: 22px; cursor: pointer;
-        transition: transform 0.1s, background 0.15s; user-select: none;
+        transition: transform 0.1s, background 0.15s; user-select: none; position: relative;
     }
-    .seat:hover:not(.occupied) { transform: scale(1.15); border-color: #e30613; }
+    .seat:hover:not(.occupied):not(.held-other) { transform: scale(1.15); border-color: #e30613; }
     .seat.vip { background: #fff0e8; border-color: #d28a67; }
     .seat.occupied { background: #999 !important; border-color: #aaa !important; color: white !important; cursor: not-allowed !important; opacity: 0.65; }
+    .seat.held-other { background: #f59e0b !important; border-color: #d97706 !important; color: white !important; cursor: not-allowed !important; }
     .seat.selected { background: #e30613 !important; border-color: #e30613 !important; color: white !important; }
     
     .seat-row {
@@ -85,6 +94,12 @@
             ⚠️ @TempData["ErrorMessage"]
         </div>
     }
+    @if (TempData["TierUpgradeMessage"] != null)
+    {
+        <div style="background: #ecfdf5; color: #047857; padding: 12px 16px; border-radius: 4px; margin-bottom: 16px; font-weight: 700; border: 1px solid #a7f3d0;">
+            @TempData["TierUpgradeMessage"]
+        </div>
+    }
 
     <a asp-controller="Movie" asp-action="Index" style="display: inline-block; color: #e30613; font-size: 0.82rem; font-weight: 700; margin-bottom: 18px;">← Quay lại danh sách phim</a>
     
@@ -105,7 +120,8 @@
                 <p style="margin: 0 0 4px;">Rạp: <strong style="color: white;">@(cinema?.Name ?? "CGV Landmark 81")</strong></p>
                 <p style="margin: 0 0 4px;">Phòng chiếu: <strong style="color: white;">@(showtime?.CinemaHall?.Name ?? "Cinema 01")</strong></p>
                 <p style="margin: 0 0 4px;">Suất: <strong style="color: #e30613;">@(showtime != null ? showtime.StartTime.ToString("HH:mm - dd/MM/yyyy") : "Chưa có suất")</strong></p>
-                <p style="margin: 0;">Giá cơ bản: <strong style="color: #4caf50;">@basePrice.ToString("N0") VNĐ</strong></p>
+                <p style="margin: 0 0 4px;">Giá cơ bản: <strong style="color: #4caf50;">@basePrice.ToString("N0") VNĐ</strong></p>
+                <p style="margin: 0;">Hạng thành viên: <strong style="color: @memberBadgeColor;">@memberTierName</strong></p>
             </div>
         </div>
 
@@ -113,6 +129,40 @@
         <div style="padding: 32px 36px;">
             <p style="color: #e30613; font-size: 0.78rem; font-weight: 800; letter-spacing: 1px; margin: 0 0 4px;">ĐẶT VÉ TRỰC TUYẾN</p>
             <h1 style="font-family: 'Montserrat', 'Roboto', sans-serif; font-size: 1.45rem; font-weight: 800; margin: 0 0 20px; color: #1a1a1a;">CHỌN SUẤT CHIẾU & GHẾ NGỒI</h1>
+
+            <!-- Thanh đếm ngược giữ chỗ 5 phút (GIUCHO) -->
+            <div id="hold-countdown-banner" style="display: none; background: #fffbeb; border: 1px solid #fef3c7; border-left: 4px solid #f59e0b; padding: 12px 18px; border-radius: 6px; margin-bottom: 20px; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 1.5rem;">⏱️</span>
+                    <div>
+                        <div style="font-weight: 800; color: #b45309; font-size: 0.88rem;">HỆ THỐNG ĐANG TẠM GIỮ CHỖ TRONG 5 PHÚT</div>
+                        <div style="font-size: 0.76rem; color: #92400e; margin-top: 2px;">
+                            Ghế được tạm giữ trong 5 phút. <strong>Khi bạn thanh toán thành công thì ghế mới chính thức thuộc về bạn!</strong>
+                        </div>
+                    </div>
+                </div>
+                <div style="text-align: right; min-width: 90px;">
+                    <div style="font-size: 0.68rem; color: #b45309; font-weight: 700; text-transform: uppercase;">Còn lại</div>
+                    <div id="banner-timer-display" style="font-family: monospace; font-size: 1.45rem; font-weight: 800; color: #dc2626; line-height: 1;">05:00</div>
+                </div>
+            </div>
+
+            <!-- Ưu đãi cấp bậc thành viên CGV (CAPBAC_THANHVIEN) -->
+            @if (memberDiscountPercent > 0)
+            {
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #16a34a; padding: 10px 16px; border-radius: 6px; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 1.2rem;">👑</span>
+                        <div>
+                            <span style="font-weight: 800; color: #166534; font-size: 0.85rem;">ĐẶC QUYỀN HẠNG @memberTierName.ToUpper():</span>
+                            <span style="font-size: 0.8rem; color: #15803d;">Bạn được giảm ngay @memberDiscountPercent% trên tổng tiền vé!</span>
+                        </div>
+                    </div>
+                    <span style="background: @memberBadgeColor; color: white; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 800;">
+                        -@memberDiscountPercent% VÉ
+                    </span>
+                </div>
+            }
 
             <!-- Chọn Phim & Cụm rạp -->
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
@@ -198,7 +248,13 @@
                                     {
                                         var code = $"{row}{num}";
                                         var isOcc = occupiedSeats.Contains(code);
-                                        <div class="seat @(isOcc ? "occupied" : "")" onclick="toggleSeat(this, '@code', @(isVipRow ? 1 : 0))">@num</div>
+                                        var isHeldOther = heldByOtherSeats.Contains(code);
+                                        var isMyHold = myHeldSeats.Contains(code);
+                                        var seatClass = isOcc ? "occupied" : (isHeldOther ? "held-other" : (isMyHold ? "selected" : (isVipRow ? "vip" : "")));
+                                        var lockType = isOcc ? 1 : (isHeldOther ? 2 : 0);
+                                        var tip = isOcc ? "Ghế đã thanh toán" : (isHeldOther ? "Ghế đang được người khác giữ chỗ trong 5 phút" : (isVipRow ? "Ghế VIP" : "Ghế thường"));
+
+                                        <div class="seat @seatClass" id="seat-elem-@code" title="@tip" onclick="toggleSeat(this, '@code', @(isVipRow ? 1 : 0), @lockType)">@num</div>
                                     }
                                 </div>
 
@@ -208,7 +264,13 @@
                                     {
                                         var code = $"{row}{num}";
                                         var isOcc = occupiedSeats.Contains(code);
-                                        <div class="seat @(isVipRow ? "vip" : "") @(isOcc ? "occupied" : "")" onclick="toggleSeat(this, '@code', @(isVipRow ? 1 : 0))">@num</div>
+                                        var isHeldOther = heldByOtherSeats.Contains(code);
+                                        var isMyHold = myHeldSeats.Contains(code);
+                                        var seatClass = isOcc ? "occupied" : (isHeldOther ? "held-other" : (isMyHold ? "selected" : (isVipRow ? "vip" : "")));
+                                        var lockType = isOcc ? 1 : (isHeldOther ? 2 : 0);
+                                        var tip = isOcc ? "Ghế đã thanh toán" : (isHeldOther ? "Ghế đang được người khác giữ chỗ trong 5 phút" : (isVipRow ? "Ghế VIP" : "Ghế thường"));
+
+                                        <div class="seat @seatClass" id="seat-elem-@code" title="@tip" onclick="toggleSeat(this, '@code', @(isVipRow ? 1 : 0), @lockType)">@num</div>
                                     }
                                 </div>
 
@@ -218,7 +280,13 @@
                                     {
                                         var code = $"{row}{num}";
                                         var isOcc = occupiedSeats.Contains(code);
-                                        <div class="seat @(isOcc ? "occupied" : "")" onclick="toggleSeat(this, '@code', @(isVipRow ? 1 : 0))">@num</div>
+                                        var isHeldOther = heldByOtherSeats.Contains(code);
+                                        var isMyHold = myHeldSeats.Contains(code);
+                                        var seatClass = isOcc ? "occupied" : (isHeldOther ? "held-other" : (isMyHold ? "selected" : (isVipRow ? "vip" : "")));
+                                        var lockType = isOcc ? 1 : (isHeldOther ? 2 : 0);
+                                        var tip = isOcc ? "Ghế đã thanh toán" : (isHeldOther ? "Ghế đang được người khác giữ chỗ trong 5 phút" : (isVipRow ? "Ghế VIP" : "Ghế thường"));
+
+                                        <div class="seat @seatClass" id="seat-elem-@code" title="@tip" onclick="toggleSeat(this, '@code', @(isVipRow ? 1 : 0), @lockType)">@num</div>
                                     }
                                 </div>
 
@@ -228,7 +296,7 @@
                     </div>
 
                     <!-- Legend -->
-                    <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-top: 18px; padding-top: 12px; border-top: 1px solid #e0d8ca;">
+                    <div style="display: flex; justify-content: center; gap: 18px; flex-wrap: wrap; margin-top: 18px; padding-top: 12px; border-top: 1px solid #e0d8ca;">
                         <span style="display: flex; align-items: center; gap: 6px; color: #555; font-size: 0.72rem;">
                             <span style="width: 16px; height: 14px; border: 1px solid #888; border-radius: 2px 2px 4px 4px; background: white;"></span> Ghế thường (@basePrice.ToString("N0")đ)
                         </span>
@@ -239,7 +307,10 @@
                             <span style="width: 16px; height: 14px; border: 1px solid #e30613; border-radius: 2px 2px 4px 4px; background: #e30613;"></span> Đang chọn
                         </span>
                         <span style="display: flex; align-items: center; gap: 6px; color: #555; font-size: 0.72rem;">
-                            <span style="width: 16px; height: 14px; border: 1px solid #999; border-radius: 2px 2px 4px 4px; background: #999;"></span> Đã đặt
+                            <span style="width: 16px; height: 14px; border: 1px solid #d97706; border-radius: 2px 2px 4px 4px; background: #f59e0b;"></span> Đang giữ chỗ (Tạm khóa 5p)
+                        </span>
+                        <span style="display: flex; align-items: center; gap: 6px; color: #555; font-size: 0.72rem;">
+                            <span style="width: 16px; height: 14px; border: 1px solid #999; border-radius: 2px 2px 4px 4px; background: #999;"></span> Đã thanh toán
                         </span>
                     </div>
                 </div>
@@ -285,10 +356,12 @@
                     <p style="color: #777; font-size: 0.75rem; margin: 0 0 4px;">Ghế & Bắp nước:</p>
                     <p id="selected-seats-text" style="font-weight: 800; font-size: 1.05rem; color: #e30613; margin: 0;">Chưa chọn ghế</p>
                     <p id="selected-food-text" style="color: #455a64; font-size: 0.78rem; margin: 2px 0 0; display: none;"></p>
+                    <p id="discount-text" style="color: #16a34a; font-size: 0.8rem; font-weight: 700; margin: 2px 0 0; display: none;"></p>
                     <p id="total-price-text" style="color: #555; font-size: 0.85rem; margin: 4px 0 0;">Tổng thanh toán: <strong>0 VNĐ</strong></p>
                 </div>
-                <button type="button" onclick="openCheckoutModal()" style="min-width: 200px; background: #e30613; color: white; border: none; border-radius: 4px; padding: 14px 20px; font-weight: 800; font-size: 0.95rem; letter-spacing: 0.5px; cursor: pointer; transition: background 0.15s;">
-                    TIẾP TỤC ĐẶT VÉ ›
+                <button type="button" onclick="requestHoldAndProceed()" id="btn-proceed" style="min-width: 200px; background: #e30613; color: white; border: none; border-radius: 4px; padding: 14px 20px; font-weight: 800; font-size: 0.95rem; letter-spacing: 0.5px; cursor: pointer; transition: background 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <span>⏱️ GIỮ CHỖ 5P & ĐẶT VÉ</span>
+                    <span>›</span>
                 </button>
             </div>
         </div>
@@ -298,8 +371,13 @@
 <!-- Modal 1: Xác Nhận Thông Tin Đặt Vé -->
 <div class="modal-overlay" id="checkout-modal">
     <div class="modal-box">
-        <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #e30613;padding-bottom:10px;margin-bottom:16px;">
-            <h3 style="margin:0;font-family:'Montserrat',sans-serif;font-size:1.15rem;font-weight:800;color:#111;">Xác Nhận Đặt Vé & Thanh Toán</h3>
+        <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #e30613;padding-bottom:10px;margin-bottom:14px;">
+            <div>
+                <h3 style="margin:0;font-family:'Montserrat',sans-serif;font-size:1.12rem;font-weight:800;color:#111;">Xác Nhận Đặt Vé & Thanh Toán</h3>
+                <div style="font-size:0.75rem; color:#b45309; font-weight:700; display:flex; align-items:center; gap:4px; margin-top:2px;">
+                    <span>⏱️</span> Thời gian giữ chỗ còn: <span id="modal-timer-display" style="font-family:monospace; font-weight:800; color:#dc2626;">05:00</span>
+                </div>
+            </div>
             <button type="button" onclick="closeCheckoutModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#888;">×</button>
         </div>
 
@@ -311,13 +389,18 @@
             <input type="hidden" id="form-food-total" name="foodTotal" value="0" />
             <input type="hidden" id="form-food-json" name="foodItemsJson" value="" />
 
-            <div style="background:#f5f0e8;border-radius:6px;padding:14px;margin-bottom:16px;font-size:0.85rem;">
-                <p style="margin:0 0 4px;">Phim: <strong>@(movie?.Title)</strong></p>
-                <p style="margin:0 0 4px;">Rạp: <strong>@(cinema?.Name) - @(showtime?.CinemaHall?.Name)</strong></p>
-                <p style="margin:0 0 4px;">Suất: <strong style="color:#e30613;">@(showtime?.StartTime.ToString("HH:mm - dd/MM/yyyy"))</strong></p>
-                <p style="margin:0 0 4px;">Ghế đã chọn: <strong id="modal-seats-text" style="color:#e30613;"></strong></p>
-                <p id="modal-food-row" style="margin:0 0 4px; display: none;">Bắp nước kèm: <strong id="modal-food-text" style="color:#e65100;"></strong></p>
-                <p style="margin:0;">Tổng thanh toán: <strong id="modal-price-text" style="color:#2e7d32;font-size:1.1rem;"></strong></p>
+            <div style="background:#f5f0e8;border-radius:6px;padding:14px;margin-bottom:14px;font-size:0.85rem;line-height:1.5;">
+                <p style="margin:0 0 3px;">Phim: <strong>@(movie?.Title)</strong></p>
+                <p style="margin:0 0 3px;">Rạp: <strong>@(cinema?.Name) - @(showtime?.CinemaHall?.Name)</strong></p>
+                <p style="margin:0 0 3px;">Suất: <strong style="color:#e30613;">@(showtime?.StartTime.ToString("HH:mm - dd/MM/yyyy"))</strong></p>
+                <p style="margin:0 0 3px;">Ghế đã chọn: <strong id="modal-seats-text" style="color:#e30613;"></strong></p>
+                <p id="modal-food-row" style="margin:0 0 3px; display: none;">Bắp nước kèm: <strong id="modal-food-text" style="color:#e65100;"></strong></p>
+                <p id="modal-discount-row" style="margin:0 0 3px; display: none; color:#16a34a; font-weight:700;">
+                    Ưu đãi hạng @memberTierName (-@memberDiscountPercent%): <span id="modal-discount-text"></span>
+                </p>
+                <div style="border-top:1px dashed #d7ccc8; margin-top:6px; padding-top:6px;">
+                    Tổng thanh toán: <strong id="modal-price-text" style="color:#2e7d32;font-size:1.15rem;"></strong>
+                </div>
             </div>
 
             <div class="form-group">
@@ -359,18 +442,24 @@
 <div class="modal-overlay" id="qr-payment-modal" style="z-index: 1050;">
     <div class="modal-box" style="max-width: 460px; text-align: center; border-top: 4px solid #e30613;">
         <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eee;padding-bottom:10px;margin-bottom:14px;">
-            <h3 style="margin:0;font-family:'Montserrat',sans-serif;font-size:1.15rem;font-weight:800;color:#e30613;display:flex;align-items:center;gap:6px;">
-                <span>📲</span> QUÉT MÃ QR THANH TOÁN
-            </h3>
+            <div>
+                <h3 style="margin:0;font-family:'Montserrat',sans-serif;font-size:1.15rem;font-weight:800;color:#e30613;display:flex;align-items:center;gap:6px;">
+                    <span>📲</span> QUÉT MÃ QR THANH TOÁN
+                </h3>
+                <div style="font-size:0.75rem; color:#b45309; font-weight:700; text-align:left; margin-top:2px;">
+                    ⏱️ Hạn giữ chỗ: <span id="qr-timer-display" style="font-family:monospace; color:#dc2626;">05:00</span>
+                </div>
+            </div>
             <button type="button" onclick="closeQrPaymentModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#888;">×</button>
         </div>
 
         <div style="background:#fcf9f4;border:1px solid #ebd8c8;border-radius:6px;padding:12px;margin-bottom:14px;text-align:left;font-size:0.83rem;line-height:1.5;">
             <div>Phim: <strong>@(movie?.Title)</strong></div>
             <div>Rạp: <strong>@(cinema?.Name) - @(showtime?.CinemaHall?.Name)</strong></div>
-            <div>Ghế: <strong id="qr-seats-text" style="color:#e30613;"></strong></div>
+            <div>Ghế giữ chỗ: <strong id="qr-seats-text" style="color:#e30613;"></strong></div>
             <div>Cổng thanh toán: <strong id="qr-method-text" style="color:#0288d1;">VNPAY-QR</strong></div>
             <div style="margin-top:4px;font-size:0.95rem;">Số tiền thanh toán: <strong id="qr-price-text" style="color:#2e7d32;font-size:1.18rem;"></strong></div>
+            <div style="font-size:0.75rem; color:#78350f; font-style:italic; margin-top:2px;">* Chỉ khi bạn quét mã thanh toán thì ghế mới chính thức được ghi nhận!</div>
         </div>
 
         <!-- Khung QR Code Tương Tác (Nhấn vào mới tính là thanh toán) -->
@@ -383,16 +472,16 @@
             <div id="qr-success-overlay" style="display:none; position:absolute; inset:0; background:rgba(255,255,255,0.96); border-radius:10px; flex-direction:column; align-items:center; justify-content:center; gap:8px;">
                 <div style="font-size:3.5rem; color:#2e7d32; animation: popCheck 0.4s ease;">✅</div>
                 <div style="font-weight:800; color:#2e7d32; font-size:1rem;">ĐÃ THANH TOÁN THÀNH CÔNG!</div>
-                <div style="font-size:0.8rem; color:#666;">Đang ghi nhận đơn vé...</div>
+                <div style="font-size:0.8rem; color:#666;">Đang lưu vé vào hệ thống...</div>
             </div>
         </div>
 
         <div style="margin-top: 12px;">
             <p style="font-size: 0.9rem; font-weight: 800; color: #e30613; margin: 0 0 3px; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                <span>👆</span> BẤM TRỰC TIẾP VÀO MÃ QR ĐỂ THANH TOÁN
+                <span>👆</span> BẤM TRỰC TIẾP VÀO MÃ QR ĐỂ HOÀN TẤT THANH TOÁN
             </p>
             <p style="font-size: 0.76rem; color: #666; margin: 0 0 14px;">
-                (Nhấn vào QR để hệ thống xác nhận hoàn tất thanh toán)
+                (Nhấn vào QR để hệ thống xác nhận thanh toán và cấp mã vé)
             </p>
         </div>
 
@@ -409,8 +498,93 @@
 <script>
     // @@ts-nocheck
     const basePrice = @basePrice;
+    const memberDiscountPercent = @memberDiscountPercent;
     let selectedSeats = [];
     let selectedFoods = {}; // { [id]: { name, price, qty } }
+    
+    // Quản lý đồng hồ đếm ngược giữ chỗ 5 phút
+    let holdTimerInterval = null;
+    let holdRemainingSeconds = @myRemainingSeconds;
+
+    // Khởi tạo các ghế đã giữ trước đó nếu còn thời gian
+    @if (myHeldSeats.Any() && myRemainingSeconds > 0)
+    {
+        foreach (var s in myHeldSeats)
+        {
+            var isVipRow = (s.StartsWith("C") || s.StartsWith("D")) ? 1 : 0;
+            <text>
+            selectedSeats.push({ code: '@s', isVip: @isVipRow === 1 });
+            </text>
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        if (holdRemainingSeconds > 0 && selectedSeats.length > 0) {
+            startHoldTimer(holdRemainingSeconds);
+        }
+        updateSummary();
+    });
+
+    function formatTime(sec) {
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        return (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s);
+    }
+
+    function startHoldTimer(seconds) {
+        if (holdTimerInterval) {
+            clearInterval(holdTimerInterval);
+        }
+        holdRemainingSeconds = seconds;
+
+        const banner = document.getElementById('hold-countdown-banner');
+        if (banner) banner.style.display = 'flex';
+
+        updateTimerDisplays(holdRemainingSeconds);
+
+        holdTimerInterval = setInterval(function () {
+            holdRemainingSeconds--;
+            if (holdRemainingSeconds <= 0) {
+                clearInterval(holdTimerInterval);
+                holdTimerInterval = null;
+                updateTimerDisplays(0);
+                onHoldExpired();
+            } else {
+                updateTimerDisplays(holdRemainingSeconds);
+            }
+        }, 1000);
+    }
+
+    function updateTimerDisplays(sec) {
+        const str = formatTime(sec);
+        const b = document.getElementById('banner-timer-display');
+        const m = document.getElementById('modal-timer-display');
+        const q = document.getElementById('qr-timer-display');
+        if (b) b.textContent = str;
+        if (m) m.textContent = str;
+        if (q) q.textContent = str;
+    }
+
+    function onHoldExpired() {
+        // Đóng các modal
+        const checkoutModal = document.getElementById('checkout-modal');
+        const qrModal = document.getElementById('qr-payment-modal');
+        if (checkoutModal) checkoutModal.classList.remove('active');
+        if (qrModal) qrModal.classList.remove('active');
+
+        const banner = document.getElementById('hold-countdown-banner');
+        if (banner) banner.style.display = 'none';
+
+        alert('⚠️ ĐÃ HẾT THỜI GIAN GIỮ CHỖ (5 PHÚT)!\nGhế của bạn đã được giải phóng cho khách hàng khác. Vui lòng chọn lại ghế nếu muốn tiếp tục.');
+        
+        // Bỏ chọn ghế trên giao diện
+        selectedSeats.forEach(function (s) {
+            const elem = document.getElementById('seat-elem-' + s.code);
+            if (elem) elem.classList.remove('selected');
+        });
+        selectedSeats = [];
+        updateSummary();
+    }
 
     function changeFoodQty(id, delta, name, price) {
         if (!selectedFoods[id]) {
@@ -425,9 +599,18 @@
         updateSummary();
     }
     
-    function toggleSeat(elem, seatCode, isVip) {
-        if (!elem || elem.classList.contains('occupied')) return;
+    function toggleSeat(elem, seatCode, isVip, lockType) {
+        if (!elem) return;
         
+        if (lockType === 1) {
+            alert('Ghế ' + seatCode + ' đã được thanh toán!');
+            return;
+        }
+        if (lockType === 2) {
+            alert('Ghế ' + seatCode + ' đang được người khác giữ chỗ trong 5 phút! Vui lòng chọn ghế khác.');
+            return;
+        }
+
         const existingIdx = selectedSeats.findIndex(s => s.code === seatCode);
         if (existingIdx >= 0) {
             elem.classList.remove('selected');
@@ -446,6 +629,11 @@
             seatTotal += basePrice + (s.isVip ? 15000 : 0);
         });
 
+        let discountAmount = 0;
+        if (memberDiscountPercent > 0) {
+            discountAmount = Math.round(seatTotal * (memberDiscountPercent / 100));
+        }
+
         let foodTotal = 0;
         let foodSummaryParts = [];
         for (const id in selectedFoods) {
@@ -455,10 +643,13 @@
             }
         }
 
+        const grandTotal = seatTotal - discountAmount + foodTotal;
+
         return {
             seatTotal,
+            discountAmount,
             foodTotal,
-            grandTotal: seatTotal + foodTotal,
+            grandTotal,
             foodSummary: foodSummaryParts.join(', ')
         };
     }
@@ -466,9 +657,10 @@
     function updateSummary() {
         const textElem = document.getElementById('selected-seats-text');
         const foodTextElem = document.getElementById('selected-food-text');
+        const discountElem = document.getElementById('discount-text');
         const priceElem = document.getElementById('total-price-text');
         
-        const { seatTotal, foodTotal, grandTotal, foodSummary } = calculateTotals();
+        const { seatTotal, discountAmount, foodTotal, grandTotal, foodSummary } = calculateTotals();
 
         if (selectedSeats.length === 0) {
             if (textElem) textElem.textContent = 'Chưa chọn ghế';
@@ -486,12 +678,22 @@
             if (foodTextElem) foodTextElem.style.display = 'none';
         }
 
+        if (discountAmount > 0) {
+            if (discountElem) {
+                discountElem.style.display = 'block';
+                discountElem.textContent = `👑 Giảm giá hạng ${'@memberTierName'}: -${discountAmount.toLocaleString('vi-VN')} VNĐ`;
+            }
+        } else {
+            if (discountElem) discountElem.style.display = 'none';
+        }
+
         if (priceElem) {
             priceElem.innerHTML = 'Tổng thanh toán: <strong>' + grandTotal.toLocaleString('vi-VN') + ' VNĐ</strong>';
         }
     }
     
-    function openCheckoutModal() {
+    // Gửi yêu cầu giữ chỗ 5 phút trước khi mở modal đặt vé
+    async function requestHoldAndProceed() {
         const showtimeInput = document.querySelector('input[name="showtimeId"]');
         const showtimeVal = showtimeInput ? parseInt(showtimeInput.value) : 0;
         if (!showtimeVal || showtimeVal <= 0) {
@@ -500,12 +702,58 @@
         }
 
         if (selectedSeats.length === 0) {
-            alert('Vui lòng chọn ít nhất 1 ghế để tiếp tục đặt vé!');
+            alert('Vui lòng chọn ít nhất 1 ghế để giữ chỗ và đặt vé!');
             return;
         }
-        
+
         const seatNames = selectedSeats.map(s => s.code).join(', ');
-        const { foodTotal, grandTotal, foodSummary } = calculateTotals();
+        const btnProceed = document.getElementById('btn-proceed');
+        if (btnProceed) {
+            btnProceed.disabled = true;
+            btnProceed.innerHTML = '<span>⏳ Đang giữ chỗ...</span>';
+        }
+
+        try {
+            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+            const formData = new FormData();
+            formData.append('showtimeId', showtimeVal);
+            formData.append('seatsList', seatNames);
+            formData.append('__RequestVerificationToken', token);
+
+            const res = await fetch('@Url.Action("HoldSeats", "Booking")', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await res.json();
+            if (!data.success) {
+                alert('⚠️ ' + data.message);
+                if (btnProceed) {
+                    btnProceed.disabled = false;
+                    btnProceed.innerHTML = '<span>⏱️ GIỮ CHỖ 5P & ĐẶT VÉ</span> <span>›</span>';
+                }
+                return;
+            }
+
+            // Kích hoạt đồng hồ đếm ngược 5 phút
+            startHoldTimer(data.remainingSeconds || 300);
+
+            // Mở modal xác nhận đặt vé
+            openCheckoutModalUI();
+
+        } catch (err) {
+            alert('Có lỗi xảy ra khi kết nối giữ chỗ: ' + err);
+        } finally {
+            if (btnProceed) {
+                btnProceed.disabled = false;
+                btnProceed.innerHTML = '<span>⏱️ GIỮ CHỖ 5P & ĐẶT VÉ</span> <span>›</span>';
+            }
+        }
+    }
+
+    function openCheckoutModalUI() {
+        const seatNames = selectedSeats.map(s => s.code).join(', ');
+        const { discountAmount, foodTotal, grandTotal, foodSummary } = calculateTotals();
 
         const formSeats = document.getElementById('form-seats-list');
         const formFoodSummary = document.getElementById('form-food-summary');
@@ -515,6 +763,8 @@
         const modalSeats = document.getElementById('modal-seats-text');
         const modalFoodRow = document.getElementById('modal-food-row');
         const modalFoodText = document.getElementById('modal-food-text');
+        const modalDiscountRow = document.getElementById('modal-discount-row');
+        const modalDiscountText = document.getElementById('modal-discount-text');
         const modalPrice = document.getElementById('modal-price-text');
         const checkoutModal = document.getElementById('checkout-modal');
 
@@ -534,7 +784,6 @@
         }
         if (formFoodJson) formFoodJson.value = JSON.stringify(foodOrderList);
 
-
         if (modalSeats) modalSeats.textContent = `${seatNames} (${selectedSeats.length} ghế)`;
 
         if (foodSummary) {
@@ -542,6 +791,13 @@
             if (modalFoodText) modalFoodText.textContent = `${foodSummary} (+${foodTotal.toLocaleString('vi-VN')} đ)`;
         } else {
             if (modalFoodRow) modalFoodRow.style.display = 'none';
+        }
+
+        if (discountAmount > 0) {
+            if (modalDiscountRow) modalDiscountRow.style.display = 'block';
+            if (modalDiscountText) modalDiscountText.textContent = `-${discountAmount.toLocaleString('vi-VN')} VNĐ`;
+        } else {
+            if (modalDiscountRow) modalDiscountRow.style.display = 'none';
         }
 
         if (modalPrice) modalPrice.textContent = grandTotal.toLocaleString('vi-VN') + ' VNĐ';

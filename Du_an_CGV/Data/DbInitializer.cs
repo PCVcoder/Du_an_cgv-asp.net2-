@@ -20,6 +20,7 @@ namespace Du_an_CGV.Data
                 await EnsureCinemasSeededAsync(context);
                 await EnsureAllMoviesHaveShowtimesAsync(context);
                 await EnsureAdminActionLogsAndSampleBookingsAsync(context);
+                await EnsureMemberTiersAndSeatHoldsTableAsync(context, userManager);
                 return;
             }
 
@@ -655,6 +656,7 @@ namespace Du_an_CGV.Data
 
             await EnsureFoodItemsTableAndSeedAsync(context);
             await EnsureAdminActionLogsAndSampleBookingsAsync(context);
+            await EnsureMemberTiersAndSeatHoldsTableAsync(context, null);
         }
 
         public static async Task EnsureFoodItemsTableAndSeedAsync(ApplicationDbContext context)
@@ -1396,6 +1398,118 @@ namespace Du_an_CGV.Data
                             }
                         }
                     }
+                }
+            }
+            catch
+            {
+                // Ignore seed error
+            }
+        }
+
+        public static async Task EnsureMemberTiersAndSeatHoldsTableAsync(ApplicationDbContext context, UserManager<ApplicationUser>? userManager)
+        {
+            try
+            {
+                // 1. Tạo bảng CAPBAC_THANHVIEN nếu chưa tồn tại
+                await context.Database.ExecuteSqlRawAsync(@"
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'CAPBAC_THANHVIEN')
+                    BEGIN
+                        CREATE TABLE [CAPBAC_THANHVIEN] (
+                            [MaCapBac] int NOT NULL IDENTITY(1,1),
+                            [TenCapBac] nvarchar(100) NOT NULL,
+                            [DiemYeuCau] int NOT NULL DEFAULT 0,
+                            [PhanTramGiamGia] decimal(5,2) NOT NULL DEFAULT 0,
+                            [MoTa] nvarchar(max) NULL,
+                            [MauHienThi] nvarchar(50) NOT NULL DEFAULT '#757575',
+                            CONSTRAINT [PK_CAPBAC_THANHVIEN] PRIMARY KEY ([MaCapBac])
+                        );
+                    END
+                ");
+
+                // 2. Tạo bảng GIUCHO nếu chưa tồn tại
+                await context.Database.ExecuteSqlRawAsync(@"
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'GIUCHO')
+                    BEGIN
+                        CREATE TABLE [GIUCHO] (
+                            [MaGiuCho] int NOT NULL IDENTITY(1,1),
+                            [MaSuatChieu] int NOT NULL,
+                            [MaGhe] nvarchar(20) NOT NULL,
+                            [MaKH] nvarchar(450) NULL,
+                            [ThoiGianHetHan] datetime2 NOT NULL,
+                            [CreatedAt] datetime2 NOT NULL DEFAULT GETDATE(),
+                            CONSTRAINT [PK_GIUCHO] PRIMARY KEY ([MaGiuCho]),
+                            CONSTRAINT [FK_GIUCHO_Showtimes_MaSuatChieu] FOREIGN KEY ([MaSuatChieu]) REFERENCES [Showtimes] ([Id]) ON DELETE CASCADE,
+                            CONSTRAINT [FK_GIUCHO_AspNetUsers_MaKH] FOREIGN KEY ([MaKH]) REFERENCES [AspNetUsers] ([Id]) ON DELETE CASCADE
+                        );
+                    END
+                    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_GIUCHO_MaSuatChieu_MaGhe')
+                    BEGIN
+                        CREATE INDEX [IX_GIUCHO_MaSuatChieu_MaGhe] ON [GIUCHO] ([MaSuatChieu], [MaGhe]);
+                    END
+                ");
+
+                // 3. Thêm cột MemberTierId vào AspNetUsers nếu chưa có
+                await context.Database.ExecuteSqlRawAsync(@"
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'AspNetUsers' AND COLUMN_NAME = 'MemberTierId')
+                    BEGIN
+                        ALTER TABLE [AspNetUsers] ADD [MemberTierId] int NULL;
+                    END
+                ");
+
+                // 4. Seed dữ liệu mặc định cho CAPBAC_THANHVIEN
+                if (!await context.MemberTiers.AnyAsync())
+                {
+                    var tiers = new List<MemberTier>
+                    {
+                        new MemberTier
+                        {
+                            TierName = "Thành viên Thường",
+                            MinPoints = 0,
+                            DiscountPercent = 0,
+                            BadgeColor = "#607d8b",
+                            Description = "Hạng tiêu chuẩn: Tích lũy 10% điểm thưởng cho mỗi giao dịch mua vé & bắp nước tại CGV."
+                        },
+                        new MemberTier
+                        {
+                            TierName = "Thành viên VIP",
+                            MinPoints = 500,
+                            DiscountPercent = 5,
+                            BadgeColor = "#f59e0b",
+                            Description = "Hạng VIP (500 điểm): Giảm ngay 5% giá vé khi mua trực tuyến, tặng 01 bắp rang sinh nhật & ưu tiên giữ chỗ trước."
+                        },
+                        new MemberTier
+                        {
+                            TierName = "Thành viên VVIP",
+                            MinPoints = 1000,
+                            DiscountPercent = 10,
+                            BadgeColor = "#e11d48",
+                            Description = "Hạng Thượng Hạng (1000 điểm): Giảm ngay 10% giá vé mọi suất chiếu, phòng chờ VIP sang trọng, nhận vé mời xem phim miễn phí định kỳ."
+                        }
+                    };
+
+                    await context.MemberTiers.AddRangeAsync(tiers);
+                    await context.SaveChangesAsync();
+                }
+
+                // 5. Cập nhật cấp bậc thành viên cho các User hiện tại dựa theo RewardPoints
+                var allTiers = await context.MemberTiers.OrderByDescending(t => t.MinPoints).ToListAsync();
+                var users = await context.Users.ToListAsync();
+                bool usersUpdated = false;
+
+                foreach (var u in users)
+                {
+                    var matchedTier = allTiers.FirstOrDefault(t => u.RewardPoints >= t.MinPoints);
+                    if (matchedTier != null && (u.MemberTierId != matchedTier.Id || u.MemberTier != matchedTier.TierName))
+                    {
+                        u.MemberTierId = matchedTier.Id;
+                        u.MemberTier = matchedTier.TierName;
+                        usersUpdated = true;
+                    }
+                }
+
+                if (usersUpdated)
+                {
+                    await context.SaveChangesAsync();
                 }
             }
             catch

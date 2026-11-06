@@ -43,6 +43,7 @@ CREATE TABLE [AspNetUsers] (
     [City] nvarchar(max) NULL,
     [FavoriteCinema] nvarchar(max) NULL,
     [MemberTier] nvarchar(max) NOT NULL,
+    [MemberTierId] int NULL,
     [RewardPoints] int NOT NULL,
     [CreatedAt] datetime2 NOT NULL,
     [UserName] nvarchar(256) NULL,
@@ -307,6 +308,42 @@ CREATE TABLE [BookingFoodItems] (
 );
 GO
 
+-- --------------------------------------------------
+-- Bang: [CAPBAC_THANHVIEN] (Cáº¥p Báº­c ThÃ nh ViÃªn)
+-- --------------------------------------------------
+CREATE TABLE [CAPBAC_THANHVIEN] (
+    [MaCapBac] int NOT NULL IDENTITY(1,1),
+    [TenCapBac] nvarchar(100) NOT NULL,
+    [DiemYeuCau] int NOT NULL DEFAULT 0,
+    [PhanTramGiamGia] decimal(5,2) NOT NULL DEFAULT 0,
+    [MoTa] nvarchar(max) NULL,
+    [MauHienThi] nvarchar(50) NOT NULL DEFAULT '#757575',
+    CONSTRAINT [PK_CAPBAC_THANHVIEN] PRIMARY KEY ([MaCapBac])
+);
+GO
+
+-- --------------------------------------------------
+-- Bang: [GIUCHO] (Giá»¯ Chá»— Táº¡m Thá»i Trong 5 PhÃºt Khi Mua VÃ©)
+-- Khi thanh toÃ¡n thÃ nh cÃ´ng thÃ¬ má»›i tÃ­nh gháº¿ chÃ­nh thá»©c
+-- --------------------------------------------------
+CREATE TABLE [GIUCHO] (
+    [MaGiuCho] int NOT NULL IDENTITY(1,1),
+    [MaSuatChieu] int NOT NULL,
+    [MaGhe] nvarchar(20) NOT NULL,
+    [MaKH] nvarchar(450) NULL,
+    [ThoiGianHetHan] datetime2 NOT NULL,
+    [CreatedAt] datetime2 NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT [PK_GIUCHO] PRIMARY KEY ([MaGiuCho]),
+    CONSTRAINT [FK_GIUCHO_Showtimes_MaSuatChieu] FOREIGN KEY ([MaSuatChieu]) REFERENCES [Showtimes] ([Id]) ON DELETE CASCADE,
+    CONSTRAINT [FK_GIUCHO_AspNetUsers_MaKH] FOREIGN KEY ([MaKH]) REFERENCES [AspNetUsers] ([Id]) ON DELETE CASCADE
+);
+GO
+
+CREATE INDEX [IX_GIUCHO_MaSuatChieu_MaGhe] ON [GIUCHO] ([MaSuatChieu], [MaGhe]);
+GO
+CREATE INDEX [IX_GIUCHO_MaKH] ON [GIUCHO] ([MaKH]);
+GO
+
 
 CREATE INDEX [IX_AspNetRoleClaims_RoleId] ON [AspNetRoleClaims] ([RoleId]);
 GO
@@ -402,6 +439,20 @@ GO
 
 -- ====================================================================================
 -- PHAN 2: NAP DU LIEU (DATA INSERTS)
+
+-- --------------------------------------------------
+-- Bang: [CAPBAC_THANHVIEN] (Seed Data 3 Cáº¥p Báº­c Chuáº©n)
+-- --------------------------------------------------
+SET IDENTITY_INSERT [CAPBAC_THANHVIEN] ON;
+GO
+INSERT INTO [CAPBAC_THANHVIEN] ([MaCapBac], [TenCapBac], [DiemYeuCau], [PhanTramGiamGia], [MoTa], [MauHienThi]) 
+VALUES (1, N'ThÃ nh viÃªn ThÆ°á»ng', 0, 0, N'Háº¡ng tiÃªu chuáº©n: TÃ­ch lÅ©y 10% Ä‘iá»ƒm thÆ°á»Ÿng cho má»—i giao dá»‹ch mua vÃ© & báº¯p nÆ°á»›c táº¡i CGV.', N'#607d8b');
+INSERT INTO [CAPBAC_THANHVIEN] ([MaCapBac], [TenCapBac], [DiemYeuCau], [PhanTramGiamGia], [MoTa], [MauHienThi]) 
+VALUES (2, N'ThÃ nh viÃªn VIP', 500, 5, N'Háº¡ng VIP (500 Ä‘iá»ƒm): Giáº£m ngay 5% giÃ¡ vÃ© khi mua trá»±c tuyáº¿n, táº·ng 01 báº¯p rang sinh nháº­t & Æ°u tiÃªn giá»¯ chá»— trÆ°á»›c.', N'#f59e0b');
+INSERT INTO [CAPBAC_THANHVIEN] ([MaCapBac], [TenCapBac], [DiemYeuCau], [PhanTramGiamGia], [MoTa], [MauHienThi]) 
+VALUES (3, N'ThÃ nh viÃªn VVIP', 1000, 10, N'Háº¡ng ThÆ°á»£ng Háº¡ng (1000 Ä‘iá»ƒm): Giáº£m ngay 10% giÃ¡ vÃ© má»i suáº¥t chiáº¿u, phÃ²ng chá» VIP sang trá»ng, nháº­n vÃ© má»i xem phim miá»…n phÃ­ Ä‘á»‹nh ká»³.', N'#e11d48');
+SET IDENTITY_INSERT [CAPBAC_THANHVIEN] OFF;
+GO
 -- ====================================================================================
 
 -- --------------------------------------------------

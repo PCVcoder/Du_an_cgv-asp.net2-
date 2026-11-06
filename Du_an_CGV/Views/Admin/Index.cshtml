@@ -1,4 +1,4 @@
-@model Du_an_CGV.Models.ViewModels.AdminDashboardViewModel
+﻿@model Du_an_CGV.Models.ViewModels.AdminDashboardViewModel
 @{
     ViewData["Title"] = "CGV - Hệ Thống Quản Trị Hệ Thống";
     var activeTab = (string?)ViewBag.ActiveTab ?? "dashboard";
@@ -555,7 +555,13 @@
             <button class="admin-nav-item @(activeTab == "rentals" ? "active" : "")" onclick="switchAdminTab('rentals', this)">
                 <span>🏛️</span> Thuê Rạp / Sự Kiện @if (Model.NewRentalsCount > 0) { <span class="badge" style="background: #e65100; padding: 1px 6px; margin-left: auto;">@Model.NewRentalsCount</span> }
             </button>
-        </nav>
+                    <button class="admin-nav-item @(activeTab == "membertiers" ? "active" : "")" onclick="switchAdminTab('membertiers', this)">
+                <span>👑</span> Cấp Bậc TV (@Model.MemberTiers.Count)
+            </button>
+            <button class="admin-nav-item @(activeTab == "seatholds" ? "active" : "")" onclick="switchAdminTab('seatholds', this)">
+                <span>⏱️</span> Giữ Chỗ 5P (@Model.ActiveSeatHolds.Count)
+            </button>
+</nav>
         
         <div style="padding: 16px 20px; border-top: 1px solid #2d2d2d; background: #111;">
             <div style="font-size: 0.72rem; color: #888; margin-bottom: 6px;">Đang đăng nhập:</div>
@@ -1997,6 +2003,137 @@
                 </table>
             </div>
         </div>
+
+        <!-- ===================== TAB CẤP BẬC THÀNH VIÊN (CAPBAC_THANHVIEN) ===================== -->
+        <div id="tab-membertiers" style="@(activeTab == "membertiers" ? "" : "display: none;")">
+            <div class="admin-title">
+                <span>Quản Lý Cấp Bậc Thành Viên (CAPBAC_THANHVIEN)</span>
+                <span class="badge" style="background:#2e7d32;">@Model.MemberTiers.Count Hạng Thành Viên</span>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 80px;">Mã Cấp</th>
+                            <th>Tên Cấp Bậc (TenCapBac)</th>
+                            <th>Điểm Yêu Cầu (DiemYeuCau)</th>
+                            <th>Giảm Giá Vé (%)</th>
+                            <th>Màu Huy Hiệu</th>
+                            <th>Mô Tả Quyền Lợi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var tier in Model.MemberTiers)
+                        {
+                            <tr>
+                                <td style="text-align: center; font-weight: 700;">#@tier.Id</td>
+                                <td>
+                                    <span style="font-weight: 800; color: #111; display: flex; align-items: center; gap: 6px;">
+                                        <span style="width: 12px; height: 12px; border-radius: 50%; background: @tier.BadgeColor;"></span>
+                                        @tier.TierName
+                                    </span>
+                                </td>
+                                <td>
+                                    <span style="font-weight: 700; color: #b45309;">@tier.MinPoints điểm</span>
+                                </td>
+                                <td>
+                                    <span style="background: #e8f5e9; color: #1b5e20; font-weight: 800; padding: 3px 8px; border-radius: 4px;">
+                                        -@tier.DiscountPercent%
+                                    </span>
+                                </td>
+                                <td>
+                                    <span style="display: inline-block; padding: 2px 8px; border-radius: 4px; background: @tier.BadgeColor; color: white; font-size: 0.75rem; font-weight: 700;">
+                                        @tier.BadgeColor
+                                    </span>
+                                </td>
+                                <td style="color: #555; font-size: 0.8rem; max-width: 350px;">
+                                    @tier.Description
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ===================== TAB THEO DÕI GIỮ CHỖ (GIUCHO) ===================== -->
+        <div id="tab-seatholds" style="@(activeTab == "seatholds" ? "" : "display: none;")">
+            <div class="admin-title">
+                <span>Theo Dõi Giữ Chỗ Tạm Thời 5 Phút (GIUCHO)</span>
+                <span class="badge" style="background:#e65100;">@Model.ActiveSeatHolds.Count Ghế Đang Giữ</span>
+            </div>
+
+            <p style="color: #666; font-size: 0.82rem; margin: -10px 0 16px;">
+                Danh sách các ghế đang được khách hàng tạm giữ trong 5 phút để thanh toán. Nếu quá 5 phút chưa thanh toán, hệ thống sẽ tự động hủy giữ chỗ và giải phóng ghế cho khách hàng khác.
+            </p>
+
+            <div style="overflow-x: auto;">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 80px;">Mã Giữ</th>
+                            <th>Phim & Suất Chiếu</th>
+                            <th>Rạp & Phòng Chiếu</th>
+                            <th>Ghế Giữ (MaGhe)</th>
+                            <th>Khách Hàng (MaKH)</th>
+                            <th>Thời Gian Tạo</th>
+                            <th>Hết Hạn (5 Phút)</th>
+                            <th>Trạng Thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.ActiveSeatHolds.Any())
+                        {
+                            @foreach (var hold in Model.ActiveSeatHolds)
+                            {
+                                var secLeft = hold.RemainingSeconds;
+                                <tr>
+                                    <td style="text-align: center; font-weight: 700;">#@hold.Id</td>
+                                    <td>
+                                        <div style="font-weight: 700; color: #111;">@(hold.Showtime?.Movie?.Title ?? "N/A")</div>
+                                        <div style="font-size: 0.74rem; color: #e30613;">@(hold.Showtime != null ? hold.Showtime.StartTime.ToString("HH:mm - dd/MM/yyyy") : "")</div>
+                                    </td>
+                                    <td>
+                                        <div>@(hold.Showtime?.CinemaHall?.Cinema?.Name ?? "N/A")</div>
+                                        <div style="font-size: 0.74rem; color: #777;">@(hold.Showtime?.CinemaHall?.Name)</div>
+                                    </td>
+                                    <td>
+                                        <span style="background: #fff3e0; color: #e65100; font-weight: 800; font-size: 0.85rem; padding: 3px 8px; border-radius: 4px; border: 1px solid #ffe0b2;">
+                                            @hold.SeatCode
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div>@(hold.User?.FullName ?? "Khách hàng")</div>
+                                        <div style="font-size: 0.74rem; color: #777;">@(hold.User?.Email ?? hold.UserId)</div>
+                                    </td>
+                                    <td style="font-size: 0.78rem; color: #666;">
+                                        @hold.CreatedAt.ToString("HH:mm:ss dd/MM")
+                                    </td>
+                                    <td style="font-weight: 700; color: #d32f2f;">
+                                        @hold.ExpiresAt.ToString("HH:mm:ss")
+                                        <span style="font-size: 0.72rem; color: #777;">(còn @(secLeft / 60)p @(secLeft % 60)s)</span>
+                                    </td>
+                                    <td>
+                                        <span style="background: #fff8e1; color: #b45309; font-weight: 800; font-size: 0.75rem; padding: 4px 10px; border-radius: 4px; border: 1px solid #fef3c7; display: inline-flex; align-items: center; gap: 4px;">
+                                            ⏱️ Tạm giữ 5p
+                                        </span>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="8" style="text-align: center; padding: 30px; color: #888;">
+                                    Hiện không có ghế nào đang trong trạng thái tạm giữ chỗ 5 phút. Tất cả ghế trống đều sẵn sàng để đặt!
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </main>
 </div>
 
@@ -2685,7 +2822,7 @@
             if (navBtn) navBtn.classList.add('active');
         }
         
-        ['dashboard', 'movies', 'cinemas', 'showtimes', 'food', 'promos', 'bookings', 'transactions', 'actionlogs', 'inquiries', 'rentals'].forEach(t => {
+        ['dashboard', 'movies', 'cinemas', 'showtimes', 'food', 'promos', 'bookings', 'transactions', 'actionlogs', 'inquiries', 'rentals', 'membertiers', 'seatholds'].forEach(t => {
             const elTab = document.getElementById('tab-' + t);
             if (elTab) elTab.style.display = 'none';
         });

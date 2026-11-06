@@ -95,6 +95,22 @@ namespace Du_an_CGV.Controllers
                 .OrderBy(c => c)
                 .ToList();
 
+            var memberTiers = await _context.MemberTiers
+                .OrderBy(t => t.MinPoints)
+                .ToListAsync();
+
+            var now = DateTime.Now;
+            var activeSeatHolds = await _context.SeatHolds
+                .Include(h => h.Showtime)
+                    .ThenInclude(s => s!.Movie)
+                .Include(h => h.Showtime)
+                    .ThenInclude(s => s!.CinemaHall)
+                        .ThenInclude(ch => ch!.Cinema)
+                .Include(h => h.User)
+                .Where(h => h.ExpiresAt > now)
+                .OrderByDescending(h => h.ExpiresAt)
+                .ToListAsync();
+
             var model = new AdminDashboardViewModel
             {
                 TotalNowShowingMovies = movies.Count(m => m.IsNowShowing),
@@ -119,7 +135,9 @@ namespace Du_an_CGV.Controllers
                 AllBookings = allBookings,
                 FoodItems = foodItems,
                 ActionLogs = actionLogs,
-                Provinces = provinces
+                Provinces = provinces,
+                MemberTiers = memberTiers,
+                ActiveSeatHolds = activeSeatHolds
             };
 
             ViewBag.ActiveTab = tab ?? "dashboard";

@@ -177,7 +177,22 @@ namespace Du_an_CGV.Controllers
                 .Where(b => b.UserId == user.Id || b.CustomerEmail == user.Email)
                 .CountAsync();
 
+            var allTiers = await _context.MemberTiers.OrderBy(t => t.MinPoints).ToListAsync();
+            var currentTier = allTiers.LastOrDefault(t => user.RewardPoints >= t.MinPoints) ?? allTiers.FirstOrDefault();
+            var nextTier = allTiers.FirstOrDefault(t => t.MinPoints > user.RewardPoints);
+
+            // Tự đồng bộ nếu user chưa có MemberTierId
+            if (currentTier != null && (user.MemberTierId != currentTier.Id || user.MemberTier != currentTier.TierName))
+            {
+                user.MemberTierId = currentTier.Id;
+                user.MemberTier = currentTier.TierName;
+                await _userManager.UpdateAsync(user);
+            }
+
             ViewBag.BookingsCount = myBookingsCount;
+            ViewBag.AllTiers = allTiers;
+            ViewBag.CurrentTier = currentTier;
+            ViewBag.NextTier = nextTier;
             return View(user);
         }
 

@@ -23,6 +23,8 @@ namespace Du_an_CGV.Data
         public DbSet<FoodItem> FoodItems { get; set; }
         public DbSet<BookingFoodItem> BookingFoodItems { get; set; }
         public DbSet<AdminActionLog> AdminActionLogs { get; set; }
+        public DbSet<MemberTier> MemberTiers { get; set; }
+        public DbSet<SeatHold> SeatHolds { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -148,6 +150,30 @@ namespace Du_an_CGV.Data
                 .WithMany()
                 .HasForeignKey(a => a.CinemaId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            // 6. MemberTier (CAPBAC_THANHVIEN) & ApplicationUser
+            builder.Entity<MemberTier>()
+                .Property(m => m.DiscountPercent)
+                .HasPrecision(5, 2);
+
+            builder.Entity<ApplicationUser>()
+                .HasOne(u => u.MemberTierRef)
+                .WithMany(mt => mt.Users)
+                .HasForeignKey(u => u.MemberTierId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // 7. SeatHold (GIUCHO)
+            builder.Entity<SeatHold>()
+                .HasOne(sh => sh.Showtime)
+                .WithMany()
+                .HasForeignKey(sh => sh.ShowtimeId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<SeatHold>()
+                .HasOne(sh => sh.User)
+                .WithMany()
+                .HasForeignKey(sh => sh.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

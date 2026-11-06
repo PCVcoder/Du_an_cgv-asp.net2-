@@ -1,7 +1,23 @@
 @model Du_an_CGV.Models.ApplicationUser
 @{
-    ViewData["Title"] = "Tài Khoản Của Tôi";
+    ViewData["Title"] = "Tài Khoản & Cấp Bậc Thành Viên - CGV Cinemas";
     var bookingsCount = ViewBag.BookingsCount ?? 0;
+    var allTiers = (List<Du_an_CGV.Models.MemberTier>?)ViewBag.AllTiers ?? new List<Du_an_CGV.Models.MemberTier>();
+    var currentTier = (Du_an_CGV.Models.MemberTier?)ViewBag.CurrentTier;
+    var nextTier = (Du_an_CGV.Models.MemberTier?)ViewBag.NextTier;
+
+    double progressPercent = 100;
+    int pointsNeeded = 0;
+    if (nextTier != null)
+    {
+        pointsNeeded = Math.Max(0, nextTier.MinPoints - Model.RewardPoints);
+        var basePts = currentTier?.MinPoints ?? 0;
+        var diff = nextTier.MinPoints - basePts;
+        if (diff > 0)
+        {
+            progressPercent = Math.Clamp(((Model.RewardPoints - basePts) / (double)diff) * 100.0, 5, 100);
+        }
+    }
 }
 
 @section Styles {
@@ -18,35 +34,40 @@
 <main style="max-width: 960px; min-height: 65vh; margin: 0 auto; padding: 28px 16px 56px;">
     <div style="border-bottom: 2px solid #e30613; padding-bottom: 12px; margin-bottom: 28px;">
         <p style="color: #777; font-size: 0.78rem; font-weight: 600; margin: 0 0 4px;">THÀNH VIÊN CGV CINEMAS</p>
-        <h1 style="font-family: 'Montserrat', 'Roboto', sans-serif; font-size: 1.7rem; font-weight: 800; letter-spacing: 0.5px; margin: 0; color: #1a1a1a;">TÀI KHOẢN CỦA TÔI</h1>
+        <h1 style="font-family: 'Montserrat', 'Roboto', sans-serif; font-size: 1.7rem; font-weight: 800; letter-spacing: 0.5px; margin: 0; color: #1a1a1a;">TÀI KHOẢN & CẤP BẬC THÀNH VIÊN</h1>
     </div>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+    <!-- Thông báo thăng hạng (nếu vừa đặt vé xong) -->
+    @if (TempData["TierUpgradeMessage"] != null)
+    {
+        <div style="background: #ecfdf5; color: #047857; padding: 14px 20px; border-radius: 6px; margin-bottom: 24px; font-weight: 700; border: 1px solid #a7f3d0; box-shadow: 0 2px 8px rgba(16,185,129,0.15);">
+            @TempData["TierUpgradeMessage"]
+        </div>
+    }
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 28px;">
         <!-- Cột thông tin cá nhân -->
         <section style="background: white; border-radius: 6px; padding: 28px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); border: 1px solid #e8e8e8;">
             <!-- Avatar -->
-            <div style="width: 58px; height: 58px; border-radius: 50%; background: #e30613; color: white; display: flex; align-items: center; justify-content: center; font-family: 'Montserrat', sans-serif; font-size: 1.3rem; font-weight: 800; margin-bottom: 18px; box-shadow: 0 2px 8px rgba(227,6,19,0.3);">
-                CGV
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;">
+                <div style="width: 58px; height: 58px; border-radius: 50%; background: #e30613; color: white; display: flex; align-items: center; justify-content: center; font-family: 'Montserrat', sans-serif; font-size: 1.3rem; font-weight: 800; box-shadow: 0 2px 8px rgba(227,6,19,0.3);">
+                    CGV
+                </div>
+                <span style="background: @(currentTier?.BadgeColor ?? "#e8f5e9"); color: white; font-weight: 800; font-size: 0.8rem; padding: 6px 14px; border-radius: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
+                    👑 @(currentTier?.TierName ?? Model.MemberTier)
+                </span>
             </div>
+            
             <p style="color: #888; font-size: 0.72rem; font-weight: 600; margin: 0 0 4px;">HỌ VÀ TÊN</p>
             <h2 style="font-family: 'Montserrat', 'Roboto', sans-serif; font-size: 1.2rem; font-weight: 800; margin: 0 0 16px; color: #222;">@Model.FullName</h2>
             
             <p style="color: #888; font-size: 0.72rem; font-weight: 600; margin: 0 0 4px;">EMAIL / SỐ ĐIỆN THOẠI</p>
             <p style="color: #333; font-size: 0.9rem; font-weight: 600; margin: 0 0 16px;">@Model.Email · @(Model.PhoneNumber ?? "Chưa cập nhật")</p>
             
-            <p style="color: #888; font-size: 0.72rem; font-weight: 600; margin: 0 0 4px;">CẤP ĐỘ THÀNH VIÊN</p>
-            <p style="margin: 0 0 12px;">
-                <span style="background: #e8f5e9; color: #2e7d32; font-weight: 800; font-size: 0.75rem; padding: 4px 10px; border-radius: 4px;">@Model.MemberTier</span>
-                @if (User.IsInRole("Admin"))
-                {
-                    <span style="background: #ffebee; color: #c62828; font-weight: 800; font-size: 0.75rem; padding: 4px 10px; border-radius: 4px; margin-left: 6px;">QUẢN TRỊ VIÊN HỆ THỐNG</span>
-                }
-            </p>
-
             <p style="color: #888; font-size: 0.72rem; font-weight: 600; margin: 0 0 4px;">RẠP YÊU THÍCH</p>
             <p style="color: #333; font-size: 0.88rem; font-weight: 600; margin: 0 0 24px;">@(Model.FavoriteCinema ?? "CGV Landmark 81") (@(Model.City ?? "Hồ Chí Minh"))</p>
             
-            <div style="display: flex; gap: 10px;">
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                 @if (User.IsInRole("Admin"))
                 {
                     <a asp-controller="Admin" asp-action="Index" class="btn-primary" style="background: #111;">⚙️ VÀO TRANG QUẢN LÝ</a>
@@ -58,18 +79,92 @@
             </div>
         </section>
 
-        <!-- Cột số dư & Thẻ quà tặng -->
+        <!-- Cột số dư & Tiến trình cấp bậc -->
         <section style="background: #222; color: white; border-radius: 6px; padding: 28px; box-shadow: 0 4px 16px rgba(0,0,0,0.15); display: flex; flex-direction: column; justify-content: space-between;">
             <div>
-                <p style="color: #aaa; font-size: 0.75rem; font-weight: 700; letter-spacing: 1px; margin: 0 0 8px;">SỐ DƯ TÀI KHOẢN CGV POINT</p>
-                <p style="color: white; font-family: 'Montserrat', 'Roboto', sans-serif; font-size: 2.2rem; font-weight: 800; margin: 0 0 8px;">@Model.RewardPoints <span style="font-size: 1.2rem; font-weight: 600; color: #ff9800;">Điểm</span></p>
-                <p style="color: #aaa; font-size: 0.8rem; line-height: 1.6; margin: 0 0 24px;">Điểm tích lũy và quà tặng sinh nhật được cộng trực tiếp vào số dư thành viên để đổi vé xem phim và combo bắp nước.</p>
+                <p style="color: #aaa; font-size: 0.75rem; font-weight: 700; letter-spacing: 1px; margin: 0 0 6px;">SỐ DƯ TÀI KHOẢN CGV POINT</p>
+                <p style="color: white; font-family: 'Montserrat', 'Roboto', sans-serif; font-size: 2.3rem; font-weight: 800; margin: 0 0 12px;">
+                    @Model.RewardPoints <span style="font-size: 1.15rem; font-weight: 600; color: #ff9800;">Điểm</span>
+                </p>
+
+                <!-- Thanh tiến trình thăng hạng -->
+                <div style="background: #333; padding: 14px; border-radius: 6px; margin-bottom: 20px; border: 1px solid #444;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.78rem; margin-bottom: 6px;">
+                        <span style="color: #ddd;">Cấp hiện tại: <strong style="color: @(currentTier?.BadgeColor ?? "#fff");">@(currentTier?.TierName ?? Model.MemberTier)</strong></span>
+                        @if (nextTier != null)
+                        {
+                            <span style="color: #ffb74d;">Mục tiêu: <strong>@nextTier.TierName (@nextTier.MinPoints đ)</strong></span>
+                        }
+                        else
+                        {
+                            <span style="color: #4ade80; font-weight: 700;">Hạng Cao Nhất (VVIP)</span>
+                        }
+                    </div>
+
+                    <!-- Progress bar -->
+                    <div style="background: #111; height: 10px; border-radius: 5px; overflow: hidden; position: relative;">
+                        <div style="background: linear-gradient(90deg, #ff9800, #e30613); width: @progressPercent.ToString("0")%; height: 100%; border-radius: 5px; transition: width 0.3s;"></div>
+                    </div>
+
+                    @if (nextTier != null)
+                    {
+                        <p style="color: #bbb; font-size: 0.74rem; margin: 8px 0 0;">
+                            Cần tích lũy thêm <strong style="color: white;">@pointsNeeded điểm</strong> nữa để thăng hạng <strong>@nextTier.TierName</strong> (Giảm @nextTier.DiscountPercent% giá vé)!
+                        </p>
+                    }
+                    else
+                    {
+                        <p style="color: #4ade80; font-size: 0.74rem; margin: 8px 0 0;">
+                            🏆 Bạn đang giữ cấp bậc thành viên danh giá nhất của CGV Cinemas với tối đa 10% giảm giá vé!
+                        </p>
+                    }
+                </div>
             </div>
             
             <div style="display: flex; gap: 12px; flex-wrap: wrap;">
                 <a asp-controller="Booking" asp-action="MyTickets" class="btn-primary">VÉ CỦA TÔI (@bookingsCount)</a>
-                <a asp-controller="Movie" asp-action="Index" class="btn-dark">MUA VÉ NGAY</a>
+                <a asp-controller="Movie" asp-action="Index" class="btn-dark">ĐẶT VÉ TÍCH ĐIỂM</a>
             </div>
         </section>
     </div>
+
+    <!-- Bảng quyền lợi cấp bậc thành viên CGV (CAPBAC_THANHVIEN) -->
+    <section style="background: white; border-radius: 6px; padding: 26px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); border: 1px solid #e8e8e8;">
+        <h3 style="font-family: 'Montserrat', 'Roboto', sans-serif; font-size: 1.15rem; font-weight: 800; color: #111; margin: 0 0 16px; display: flex; align-items: center; gap: 8px;">
+            <span>👑</span> CÁC HẠNG THÀNH VIÊN & QUYỀN LỢI CGV CINEMAS
+        </h3>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;">
+            @foreach (var tier in allTiers)
+            {
+                var isUserCurrent = (currentTier?.Id == tier.Id);
+                <div style="border: 2px solid @(isUserCurrent ? tier.BadgeColor : "#eee"); border-radius: 8px; padding: 20px; background: @(isUserCurrent ? "#fffbf7" : "white"); position: relative;">
+                    @if (isUserCurrent)
+                    {
+                        <span style="position: absolute; top: -10px; right: 14px; background: @tier.BadgeColor; color: white; font-size: 0.68rem; font-weight: 800; padding: 2px 8px; border-radius: 10px; text-transform: uppercase;">
+                            Hạng hiện tại của bạn
+                        </span>
+                    }
+
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                        <span style="width: 14px; height: 14px; border-radius: 50%; background: @tier.BadgeColor;"></span>
+                        <h4 style="margin: 0; font-size: 1rem; font-weight: 800; color: #111;">@tier.TierName</h4>
+                    </div>
+
+                    <p style="color: #777; font-size: 0.78rem; margin: 0 0 10px;">
+                        Yêu cầu: <strong style="color: #222;">@tier.MinPoints Điểm tích lũy</strong>
+                    </p>
+
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 8px 10px; margin-bottom: 12px;">
+                        <span style="color: #e30613; font-weight: 800; font-size: 0.82rem;">Ưu đãi vé:</span>
+                        <span style="font-weight: 700; color: #166534; font-size: 0.85rem;">Giảm @tier.DiscountPercent% trực tiếp khi đặt vé</span>
+                    </div>
+
+                    <p style="color: #555; font-size: 0.78rem; line-height: 1.5; margin: 0;">
+                        @tier.Description
+                    </p>
+                </div>
+            }
+        </div>
+    </section>
 </main>
