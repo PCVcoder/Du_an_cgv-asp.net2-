@@ -2449,6 +2449,12 @@
                                             serviceType = r.ServiceType,
                                             guestCount = r.GuestCount,
                                             expectedDate = r.ExpectedDate?.ToString("yyyy-MM-dd") ?? "",
+                                            timeSlot = r.TimeSlot ?? "Ca chiều (13:30 - 17:30)",
+                                            movieTitle = r.MovieTitle ?? "Tự chiếu nội bộ (Slide / Clip / Hội thảo)",
+                                            bookingMode = r.BookingMode ?? "Bao trọn phòng (Khóa suất)",
+                                            isHoldLocked = r.IsHoldLocked,
+                                            holdExpiresAt = r.HoldExpiresAt?.ToString("yyyy-MM-ddTHH:mm") ?? "",
+                                            allocatedHalls = r.AllocatedHalls ?? "",
                                             status = r.Status ?? "Mới tiếp nhận",
                                             estimatedBudget = r.EstimatedBudget ?? 0,
                                             notes = r.Notes ?? "",
@@ -2500,8 +2506,17 @@
                                 <td>
                                     <strong style="font-size: 0.95rem; color: #111;">@r.GuestCount</strong> người
                                     <div style="font-size: 0.76rem; color: #666; margin-top: 2px;">
-                                        Ngày: <strong>@(r.ExpectedDate?.ToString("dd/MM/yyyy") ?? "Chưa định ngày")</strong>
+                                        📅 @(r.ExpectedDate?.ToString("dd/MM/yyyy") ?? "Chưa định ngày")
                                     </div>
+                                    <div style="font-size: 0.74rem; color: #1e40af; font-weight: 600; margin-top: 1px;">
+                                        ⏰ @(string.IsNullOrEmpty(r.TimeSlot) ? "Ca chiều (13:30 - 17:30)" : r.TimeSlot)
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(r.MovieTitle))
+                                    {
+                                        <div style="font-size: 0.72rem; color: #7c2d12; margin-top: 1px; max-width: 170px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="@r.MovieTitle">
+                                            🎬 @r.MovieTitle
+                                        </div>
+                                    }
                                     @if (isExpiredDate)
                                     {
                                         <span class="badge" style="background: #f1f5f9; color: #64748b; font-size: 0.68rem; padding: 2px 5px; margin-top: 3px; display: inline-block;">⏱️ Đã qua ngày</span>
@@ -2535,6 +2550,35 @@
                                     else
                                     {
                                         <span class="badge" style="background: #64748b;">@r.Status</span>
+                                    }
+
+                                    @if (r.IsHoldLocked)
+                                    {
+                                        <div style="margin-top: 4px;">
+                                            <span class="badge" style="background: #dc2626; color: white; font-size: 0.68rem; display: inline-flex; align-items: center; gap: 3px;" title="Đã khóa giữ chỗ cho đoàn tránh bán vé lẻ">
+                                                🔒 Đang Khóa Hold
+                                            </span>
+                                            @if (r.HoldExpiresAt.HasValue)
+                                            {
+                                                <div style="font-size: 0.68rem; color: #b91c1c; margin-top: 1px;">
+                                                    Hết hạn: @r.HoldExpiresAt.Value.ToString("HH:mm dd/MM")
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+
+                                    @if (!string.IsNullOrEmpty(r.BookingMode))
+                                    {
+                                        <div style="margin-top: 3px; font-size: 0.7rem;">
+                                            @if (r.BookingMode.Contains("Bao trọn"))
+                                            {
+                                                <span style="color: #b91c1c; font-weight: 600;">🔴 Bao trọn phòng</span>
+                                            }
+                                            else if (r.BookingMode.Contains("Ghép"))
+                                            {
+                                                <span style="color: #15803d; font-weight: 600;">🟢 Ghép suất</span>
+                                            }
+                                        </div>
                                     }
                                 </td>
                                 <td style="text-align: right; white-space: nowrap;">
@@ -3558,6 +3602,8 @@
                         <div>Gói dịch vụ: <span class="badge" style="background: #5d4037;" id="rental-modal-service"></span></div>
                         <div>Số lượng khách: <strong id="rental-modal-guestcount" style="color: #e11d48; font-size: 1rem;"></strong> người</div>
                         <div>Ngày dự kiến: <strong id="rental-modal-date"></strong></div>
+                        <div>Khung giờ / Ca: <strong id="rental-modal-timeslot-text" style="color: #1e40af;"></strong></div>
+                        <div>Phim yêu cầu: <strong id="rental-modal-movie-text" style="color: #7c2d12;"></strong></div>
                     </div>
                     <div style="margin-top: 10px;">
                         <label style="font-size: 0.78rem; font-weight: 600; color: #475569;">Ghi chú từ khách hàng:</label>
@@ -3576,6 +3622,74 @@
                         <div>Tổng sức chứa cụm rạp: <strong id="rental-modal-totalcinema"></strong> ghế</div>
                     </div>
                     <div id="rental-modal-capacity-status" style="margin-top: 10px;"></div>
+                </div>
+            </div>
+
+            <!-- CẤU HÌNH THỜI GIAN, SUẤT CHIẾU, PHIM & CHẾ ĐỘ BÁN VÉ -->
+            <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 14px; margin-bottom: 16px;">
+                <div style="font-weight: 700; color: #92400e; margin-bottom: 10px; font-size: 0.9rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                    <span>⏰ KHUNG GIỜ, SUẤT CHIẾU & PHIM YÊU CẦU</span>
+                    <span class="badge" style="background: #f59e0b; color: #fff; font-size: 0.72rem;">Không thuê nguyên ngày</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                    <div>
+                        <label style="display: block; font-weight: 700; font-size: 0.8rem; margin-bottom: 4px; color: #111;">
+                            Khung Giờ / Ca Thuê:
+                        </label>
+                        <select name="timeSlot" id="rental-modal-timeslot" style="width: 100%; padding: 7px 9px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.82rem;">
+                            <option value="Ca sáng (08:00 - 12:00)">Ca sáng (08:00 - 12:00)</option>
+                            <option value="Ca chiều (13:30 - 17:30)">Ca chiều (13:30 - 17:30)</option>
+                            <option value="Ca tối (18:00 - 22:00)">Ca tối (18:00 - 22:00)</option>
+                            <option value="Suất chiếu 16:30">Suất chiếu 16:30 (Tan tầm)</option>
+                            <option value="Suất chiếu 19:30">Suất chiếu 19:30 (Giờ vàng tối)</option>
+                            <option value="Giờ linh hoạt / Thỏa thuận riêng">Giờ linh hoạt / Thỏa thuận riêng</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 700; font-size: 0.8rem; margin-bottom: 4px; color: #111;">
+                            Phim Trình Chiếu:
+                        </label>
+                        <input type="text" name="movieTitle" id="rental-modal-movietitle" list="rental-movies-datalist" placeholder="Tên phim hoặc nội bộ..." style="width: 100%; padding: 7px 9px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.82rem;" />
+                        <datalist id="rental-movies-datalist">
+                            <option value="Tự chiếu nội bộ (Slide / Clip / Hội thảo công ty)"></option>
+                            @if (Model.Movies != null)
+                            {
+                                foreach (var m in Model.Movies.Where(x => !x.IsDeleted))
+                                {
+                                    <option value="@m.Title"></option>
+                                }
+                            }
+                        </datalist>
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 700; font-size: 0.8rem; margin-bottom: 4px; color: #111;">
+                            Chế Độ Bán Vé Khách Lẻ:
+                        </label>
+                        <select name="bookingMode" id="rental-modal-bookingmode" style="width: 100%; padding: 7px 9px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.82rem;">
+                            <option value="Bao trọn phòng (Khóa suất)">🔴 Bao trọn phòng (Khóa 100% suất, cấm khách lẻ mua)</option>
+                            <option value="Ghép suất (Giữ N ghế đoàn)">🟢 Ghép suất (Chỉ giữ N ghế, ghế trống vẫn bán lẻ)</option>
+                            <option value="Hội thảo / Sự kiện doanh nghiệp">🔵 Hội thảo / Sự kiện doanh nghiệp</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Thanh Khóa Giữ Chỗ Tạm Thời (Hold) Khi Chưa Thanh Toán -->
+                <div style="background: white; border: 1px dashed #f59e0b; border-radius: 6px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                    <div style="font-size: 0.8rem; max-width: 520px;">
+                        <strong style="color: #92400e;">🛡️ Khóa Giữ Chỗ Tạm Thời (Hold) Khi Chưa Thanh Toán / Đợi Cọc:</strong>
+                        <div style="color: #64748b; font-size: 0.74rem; margin-top: 2px;">
+                            Phòng & suất chiếu sẽ được <strong>khóa giữ tạm trong 48h</strong> để bảo vệ chỗ cho đoàn trong lúc ký hợp đồng / chuyển khoản, ngăn không cho khách lẻ mua mất ghế.
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="hidden" name="isHoldLocked" id="rental-modal-isholdlocked-val" value="false" />
+                        <input type="hidden" name="holdHours" id="rental-modal-holdhours-val" value="48" />
+                        <input type="hidden" name="allocatedHalls" id="rental-modal-allocatedhalls-val" value="" />
+                        <span id="rental-modal-hold-badge" class="badge" style="background: #94a3b8; color: white;">Chưa khóa giữ chỗ</span>
+                        <button type="button" id="btn-toggle-hold-lock" onclick="toggleHoldLockInModal()" style="padding: 6px 14px; font-size: 0.8rem; font-weight: 700; border-radius: 4px; border: none; cursor: pointer; background: #dc2626; color: white; display: flex; align-items: center; gap: 4px;">
+                            <span>🔒</span> <span id="btn-toggle-hold-text">Khóa giữ chỗ (48h)</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -4804,6 +4918,24 @@
         document.getElementById('rental-modal-guestcount').textContent = (r.guestCount || 0).toLocaleString('vi-VN');
         document.getElementById('rental-modal-date').textContent = r.expectedDate ? new Date(r.expectedDate).toLocaleDateString('vi-VN') : 'Chưa định ngày';
         document.getElementById('rental-modal-notes').textContent = r.notes || 'Không có ghi chú thêm từ khách hàng.';
+        document.getElementById('rental-modal-timeslot-text').textContent = r.timeSlot || 'Ca chiều (13:30 - 17:30)';
+        document.getElementById('rental-modal-movie-text').textContent = r.movieTitle || 'Tự chiếu nội bộ (Slide / Clip / Hội thảo)';
+
+        // Form inputs: TimeSlot, Movie, BookingMode
+        const timeSlotSelect = document.getElementById('rental-modal-timeslot');
+        if (timeSlotSelect) timeSlotSelect.value = r.timeSlot || 'Ca chiều (13:30 - 17:30)';
+
+        const movieTitleInput = document.getElementById('rental-modal-movietitle');
+        if (movieTitleInput) movieTitleInput.value = r.movieTitle || 'Tự chiếu nội bộ (Slide / Clip / Hội thảo công ty)';
+
+        const bookingModeSelect = document.getElementById('rental-modal-bookingmode');
+        if (bookingModeSelect) bookingModeSelect.value = r.bookingMode || 'Bao trọn phòng (Khóa suất)';
+
+        // Hold Lock Status
+        const isHoldLocked = Boolean(r.isHoldLocked);
+        const holdHidden = document.getElementById('rental-modal-isholdlocked-val');
+        if (holdHidden) holdHidden.value = isHoldLocked ? 'true' : 'false';
+        updateHoldLockUI(isHoldLocked, r.holdExpiresAt);
 
         // Cinema capacity status
         document.getElementById('rental-modal-cinema').textContent = r.cinemaName || 'CGV Cinema';
@@ -4927,6 +5059,56 @@
         openRentalDetailModalById(id, false);
     }
 
+    function updateHoldLockUI(isLocked, expiresAt) {
+        const badge = document.getElementById('rental-modal-hold-badge');
+        const btn = document.getElementById('btn-toggle-hold-lock');
+        const text = document.getElementById('btn-toggle-hold-text');
+        if (isLocked) {
+            if (badge) {
+                badge.style.background = '#dc2626';
+                const expDateStr = expiresAt ? (' (Hết hạn: ' + new Date(expiresAt).toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'}) + ' ' + new Date(expiresAt).toLocaleDateString('vi-VN') + ')') : '';
+                badge.textContent = '🔒 ĐANG KHÓA GIỮ CHỖ' + expDateStr;
+            }
+            if (btn) {
+                btn.style.background = '#0284c7';
+                btn.setAttribute('title', 'Bấm để mở khóa phòng / suất');
+            }
+            if (text) text.textContent = 'Mở khóa (Release)';
+        } else {
+            if (badge) {
+                badge.style.background = '#94a3b8';
+                badge.textContent = 'Chưa khóa giữ chỗ';
+            }
+            if (btn) {
+                btn.style.background = '#dc2626';
+                btn.setAttribute('title', 'Khóa giữ phòng & suất chiếu 48h để đợi cọc, tránh khách lẻ mua vé');
+            }
+            if (text) text.textContent = 'Khóa giữ chỗ (48h)';
+        }
+    }
+
+    function toggleHoldLockInModal() {
+        const hiddenVal = document.getElementById('rental-modal-isholdlocked-val');
+        const currentLocked = hiddenVal ? (hiddenVal.value === 'true') : false;
+        const newLocked = !currentLocked;
+        if (hiddenVal) hiddenVal.value = newLocked ? 'true' : 'false';
+
+        const fakeExpires = newLocked ? new Date(Date.now() + 48 * 3600 * 1000).toISOString() : '';
+        updateHoldLockUI(newLocked, fakeExpires);
+
+        const adminNotesInput = document.getElementById('rental-modal-adminnotes');
+        if (adminNotesInput) {
+            const timeStr = new Date().toLocaleString('vi-VN');
+            const lockNote = newLocked 
+                ? `[ĐÃ KÍCH HOẠT KHÓA GIỮ CHỖ 48H ${timeStr}]: Đã bảo vệ phòng & khung giờ chờ khách duyệt cọc (ngăn khách lẻ mua).`
+                : `[ĐÃ MỞ KHÓA GIỮ CHỖ ${timeStr}]: Đã nhả phòng & khung giờ về trạng thái mở bán bình thường.`;
+            adminNotesInput.value = adminNotesInput.value.trim() ? lockNote + '\n---\n' + adminNotesInput.value : lockNote;
+        }
+
+        // Tự động submit để lưu ngay trạng thái khóa vào CSDL
+        document.getElementById('form-rental-details').submit();
+    }
+
     function recalculateRentalAllocation() {
         let totalSeats = 0;
         const selectedNames = [];
@@ -4934,6 +5116,9 @@
             totalSeats += parseInt(chk.getAttribute('data-seats') || 0);
             selectedNames.push(chk.getAttribute('data-name') + ' (' + chk.getAttribute('data-seats') + ' ghế)');
         });
+
+        const allocInput = document.getElementById('rental-modal-allocatedhalls-val');
+        if (allocInput) allocInput.value = selectedNames.join(', ');
 
         const summary = document.getElementById('rental-modal-alloc-summary');
         const badge = document.getElementById('rental-alloc-status-badge');
@@ -4981,6 +5166,9 @@
                 return;
             }
         }
+
+        const allocInput = document.getElementById('rental-modal-allocatedhalls-val');
+        if (allocInput) allocInput.value = selectedHalls.join(', ');
 
         const statusSelect = document.getElementById('rental-modal-status-select');
         if (statusSelect) statusSelect.value = 'Đã chốt hợp đồng';

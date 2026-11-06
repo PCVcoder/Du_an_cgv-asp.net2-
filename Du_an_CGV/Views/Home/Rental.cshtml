@@ -149,6 +149,42 @@
                 <label style="font-weight: 700; font-size: 0.85rem;">Ngày dự kiến tổ chức <span style="color: #e30613;">*</span></label>
                 <input type="date" class="input-control" name="ExpectedDate" min="@DateTime.Today.ToString("yyyy-MM-dd")" value="@DateTime.Today.AddDays(7).ToString("yyyy-MM-dd")" required>
 
+                <label style="font-weight: 700; font-size: 0.85rem;">Khung giờ / Ca sự kiện <span style="color: #e30613;">*</span></label>
+                <div>
+                    <select class="input-control" name="TimeSlot" id="rentalTimeSlot" required>
+                        <option value="Ca sáng (08:00 - 12:00)">Ca sáng (08:00 - 12:00) — Phù hợp hội thảo / tổng kết</option>
+                        <option value="Ca chiều (13:30 - 17:30)" selected>Ca chiều (13:30 - 17:30) — Phù hợp sự kiện / họp công ty</option>
+                        <option value="Ca tối (18:00 - 22:00)">Ca tối (18:00 - 22:00) — Phù hợp tiệc / xem phim tri ân</option>
+                        <option value="Suất chiếu 16:30">Suất chiếu 16:30 (Khung giờ chiều tan tầm)</option>
+                        <option value="Suất chiếu 19:30">Suất chiếu 19:30 (Khung giờ vàng tối)</option>
+                        <option value="Giờ linh hoạt / Thỏa thuận riêng">Giờ linh hoạt / Thỏa thuận riêng theo yêu cầu</option>
+                    </select>
+                    <small style="color: #666; font-size: 0.78rem; display: block; margin-top: 4px;">💡 Không ai thuê nguyên ngày: bạn có thể chọn ca sáng/chiều/tối hoặc suất chiếu giờ vàng.</small>
+                </div>
+
+                <label style="font-weight: 700; font-size: 0.85rem;">Phim trình chiếu (nếu có)</label>
+                <div>
+                    <select class="input-control" name="MovieTitle" id="rentalMovieTitle">
+                        <option value="Tự chiếu nội bộ (Slide / Clip / Hội thảo công ty)">Tự chiếu nội bộ (Slide / Clip kỷ niệm / Hội thảo không chiếu phim rạp)</option>
+                        @if (ViewBag.Movies != null)
+                        {
+                            foreach (var m in (IEnumerable<Du_an_CGV.Models.Movie>)ViewBag.Movies)
+                            {
+                                <option value="@m.Title">🎬 @m.Title (@m.Duration phút)</option>
+                            }
+                        }
+                    </select>
+                </div>
+
+                <label style="font-weight: 700; font-size: 0.85rem;">Hình thức tổ chức</label>
+                <div>
+                    <select class="input-control" name="BookingMode" id="rentalBookingMode">
+                        <option value="Bao trọn phòng (Khóa suất riêng tư)">🔴 Bao trọn phòng (Khóa toàn bộ suất chiếu, không cho khách lẻ mua vé)</option>
+                        <option value="Ghép suất (Giữ N ghế đoàn, ghế thừa vẫn mở bán)">🟢 Ghép suất vé nhóm (Chỉ giữ N ghế cho đoàn, các ghế còn lại mở bán khách lẻ)</option>
+                        <option value="Hội thảo / Sự kiện doanh nghiệp">🔵 Hội thảo / Sự kiện doanh nghiệp (Dùng micro, sân khấu, màn chiếu)</option>
+                    </select>
+                </div>
+
                 <label style="font-weight: 700; font-size: 0.85rem;">Số lượng khách dự kiến <span style="color: #e30613;">*</span></label>
                 <div>
                     <input type="number" class="input-control" id="rentalGuestCount" name="GuestCount" value="50" min="10" max="2500" required>

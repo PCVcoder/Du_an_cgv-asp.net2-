@@ -1538,6 +1538,36 @@ namespace Du_an_CGV.Data
                         ALTER TABLE [HallRentalRequests] ADD [EstimatedBudget] decimal(18,2) NULL;
                     END
 
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'HallRentalRequests' AND COLUMN_NAME = 'TimeSlot')
+                    BEGIN
+                        ALTER TABLE [HallRentalRequests] ADD [TimeSlot] nvarchar(100) NULL;
+                    END
+
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'HallRentalRequests' AND COLUMN_NAME = 'MovieTitle')
+                    BEGIN
+                        ALTER TABLE [HallRentalRequests] ADD [MovieTitle] nvarchar(255) NULL;
+                    END
+
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'HallRentalRequests' AND COLUMN_NAME = 'BookingMode')
+                    BEGIN
+                        ALTER TABLE [HallRentalRequests] ADD [BookingMode] nvarchar(100) NULL;
+                    END
+
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'HallRentalRequests' AND COLUMN_NAME = 'IsHoldLocked')
+                    BEGIN
+                        ALTER TABLE [HallRentalRequests] ADD [IsHoldLocked] bit NOT NULL DEFAULT 0;
+                    END
+
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'HallRentalRequests' AND COLUMN_NAME = 'HoldExpiresAt')
+                    BEGIN
+                        ALTER TABLE [HallRentalRequests] ADD [HoldExpiresAt] datetime2 NULL;
+                    END
+
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'HallRentalRequests' AND COLUMN_NAME = 'AllocatedHalls')
+                    BEGIN
+                        ALTER TABLE [HallRentalRequests] ADD [AllocatedHalls] nvarchar(255) NULL;
+                    END
+
                     IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'HallRentalRequests' AND COLUMN_NAME = 'IsDeleted')
                     BEGIN
                         ALTER TABLE [HallRentalRequests] ADD [IsDeleted] bit NOT NULL DEFAULT 0;

@@ -78,7 +78,17 @@ namespace Du_an_CGV.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> UpdateRentalDetails(int id, string status, string? adminNotes, decimal? estimatedBudget)
+        public async Task<IActionResult> UpdateRentalDetails(
+            int id, 
+            string status, 
+            string? adminNotes, 
+            decimal? estimatedBudget,
+            string? timeSlot,
+            string? movieTitle,
+            string? bookingMode,
+            string? allocatedHalls,
+            bool isHoldLocked,
+            int? holdHours)
         {
             var rental = await _context.HallRentalRequests.Include(r => r.Cinema).FirstOrDefaultAsync(r => r.Id == id);
             if (rental != null)
@@ -86,10 +96,50 @@ namespace Du_an_CGV.Controllers
                 rental.Status = status;
                 rental.AdminNotes = adminNotes;
                 rental.EstimatedBudget = estimatedBudget;
+                if (!string.IsNullOrWhiteSpace(timeSlot)) rental.TimeSlot = timeSlot;
+                if (!string.IsNullOrWhiteSpace(movieTitle)) rental.MovieTitle = movieTitle;
+                if (!string.IsNullOrWhiteSpace(bookingMode)) rental.BookingMode = bookingMode;
+                if (!string.IsNullOrWhiteSpace(allocatedHalls)) rental.AllocatedHalls = allocatedHalls;
+                rental.IsHoldLocked = isHoldLocked;
+                if (isHoldLocked && (!rental.HoldExpiresAt.HasValue || rental.HoldExpiresAt.Value < DateTime.Now))
+                {
+                    rental.HoldExpiresAt = DateTime.Now.AddHours(holdHours ?? 48);
+                }
+                else if (!isHoldLocked)
+                {
+                    rental.HoldExpiresAt = null;
+                }
+
                 await _context.SaveChangesAsync();
                 var budgetStr = estimatedBudget.HasValue ? $"{estimatedBudget.Value:N0}đ" : "Chưa nhập";
-                await LogActionAsync("Xử lý chi tiết", "Thuê rạp & Sự kiện", $"Cập nhật tiến độ & báo giá đơn của {rental.FullName}: Trạng thái \"{status}\", Dự toán: {budgetStr}", id.ToString(), rental.CinemaId);
-                TempData["SuccessMessage"] = $"Đã lưu tiến độ xử lý và dự toán chi phí cho khách {rental.FullName}!";
+                await LogActionAsync("Xử lý chi tiết", "Thuê rạp & Sự kiện", $"Cập nhật đơn {rental.FullName}: Trạng thái \"{status}\", Khung giờ \"{rental.TimeSlot}\", Phim \"{rental.MovieTitle}\", Khóa giữ chỗ: {(rental.IsHoldLocked ? "Đang khóa" : "Không")}", id.ToString(), rental.CinemaId);
+                TempData["SuccessMessage"] = $"Đã lưu tiến độ xử lý và cấu hình thời gian/suất chiếu cho khách {rental.FullName}!";
+            }
+            return RedirectToAction("Index", new { tab = "rentals" });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleRentalHoldLock(int id, bool lockStatus, int holdHours = 48)
+        {
+            var rental = await _context.HallRentalRequests.Include(r => r.Cinema).FirstOrDefaultAsync(r => r.Id == id);
+            if (rental != null)
+            {
+                rental.IsHoldLocked = lockStatus;
+                if (lockStatus)
+                {
+                    rental.HoldExpiresAt = DateTime.Now.AddHours(holdHours);
+                    if (rental.Status == "Mới tiếp nhận") rental.Status = "Đang tư vấn / Khảo sát rạp";
+                    await LogActionAsync("Khóa giữ chỗ", "Thuê rạp & Sự kiện", $"Khóa giữ phòng/suất tạm thời cho đơn {rental.FullName} trong {holdHours}h để đợi cọc.", id.ToString(), rental.CinemaId);
+                    TempData["SuccessMessage"] = $"🔒 Đã kích hoạt KHÓA TẠM THỜI {holdHours}h cho đơn của {rental.FullName}! Phòng và khung giờ này đã được bảo vệ tránh bán vé lẻ.";
+                }
+                else
+                {
+                    rental.HoldExpiresAt = null;
+                    await LogActionAsync("Mở khóa giữ chỗ", "Thuê rạp & Sự kiện", $"Mở khóa giữ phòng/suất cho đơn {rental.FullName}.", id.ToString(), rental.CinemaId);
+                    TempData["SuccessMessage"] = $"🔓 Đã MỞ KHÓA giữ chỗ cho đơn {rental.FullName}! Các phòng và suất chiếu có thể mở bán vé lẻ lại.";
+                }
+                await _context.SaveChangesAsync();
             }
             return RedirectToAction("Index", new { tab = "rentals" });
         }

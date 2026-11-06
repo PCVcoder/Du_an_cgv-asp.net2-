@@ -63,6 +63,12 @@ namespace Du_an_CGV.Controllers
                 .OrderBy(c => c.City)
                 .ThenBy(c => c.Name)
                 .ToListAsync();
+
+            ViewBag.Movies = await _context.Movies
+                .Where(m => !m.IsDeleted && m.IsNowShowing)
+                .OrderBy(m => m.Title)
+                .ToListAsync();
+
             return View();
         }
 
@@ -111,6 +117,12 @@ namespace Du_an_CGV.Controllers
                 .OrderBy(c => c.City)
                 .ThenBy(c => c.Name)
                 .ToListAsync();
+
+            ViewBag.Movies = await _context.Movies
+                .Where(m => !m.IsDeleted && m.IsNowShowing)
+                .OrderBy(m => m.Title)
+                .ToListAsync();
+
             return View(model);
         }
 

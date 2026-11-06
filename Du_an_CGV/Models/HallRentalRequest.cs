@@ -59,6 +59,24 @@ namespace Du_an_CGV.Models
         [Display(Name = "Dự toán / Báo giá sơ bộ (VNĐ)")]
         public decimal? EstimatedBudget { get; set; }
 
+        [Display(Name = "Khung giờ / Ca sự kiện")]
+        public string? TimeSlot { get; set; } // Ví dụ: "Ca sáng (08:00 - 12:00)", "Ca chiều (13:30 - 17:30)", "Ca tối (18:00 - 22:00)", "Suất 16:30 - 18:30"
+
+        [Display(Name = "Phim mong muốn")]
+        public string? MovieTitle { get; set; }
+
+        [Display(Name = "Hình thức đặt")]
+        public string BookingMode { get; set; } = "Bao trọn phòng (Khóa suất)"; // "Bao trọn phòng (Khóa suất)", "Ghép suất (Giữ N ghế đoàn)", "Hội thảo / Sự kiện doanh nghiệp"
+
+        [Display(Name = "Khóa giữ chỗ tạm thời")]
+        public bool IsHoldLocked { get; set; } = false;
+
+        [Display(Name = "Thời hạn giữ chỗ")]
+        public DateTime? HoldExpiresAt { get; set; }
+
+        [Display(Name = "Phòng chiếu đã bố trí")]
+        public string? AllocatedHalls { get; set; }
+
         [Display(Name = "Đã ẩn")]
         public bool IsDeleted { get; set; } = false;
     }
