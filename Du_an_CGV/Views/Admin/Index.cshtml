@@ -548,7 +548,7 @@
                 <span>🎬</span> Quản lý Phim (@Model.Movies.Count)
             </button>
             <button class="admin-nav-item @(activeTab == "cinemas" ? "active" : "")" onclick="switchAdminTab('cinemas', this)">
-                <span>📍</span> Cụm Rạp CGV (@Model.Cinemas.Count)
+                <span>🏛️</span> Quản Lý Rạp & Phòng Chiếu (@Model.Cinemas.Count)
             </button>
             <button class="admin-nav-item @(activeTab == "showtimes" ? "active" : "")" onclick="switchAdminTab('showtimes', this)">
                 <span>⏰</span> Suất Chiếu (@Model.TotalShowtimes)
@@ -2410,10 +2410,18 @@
                             var isBigOrder = r.GuestCount >= 50 || !string.IsNullOrEmpty(r.CompanyName) || (r.ServiceType != null && r.ServiceType.Contains("Thuê trọn rạp"));
                             var isExpiredDate = r.ExpectedDate.HasValue && r.ExpectedDate.Value.Date < DateTime.Today;
                             var isHidden = r.IsDeleted || r.Status == "Đã ẩn";
+                            var isNew = (r.Status == "Mới tiếp nhận" || string.IsNullOrEmpty(r.Status)) && !isHidden;
+                            var isProcessing = (r.Status == "Đang tư vấn / Khảo sát rạp" || r.Status == "Đã gửi báo giá" || r.Status == "Chờ đặt cọc" || r.Status == "Đã liên hệ") && !isHidden;
+                            var isDone = (r.Status == "Đã chốt" || r.Status == "Đã chốt hợp đồng") && !isHidden;
 
-                            var categoryTag = isHidden ? "hidden" : (r.Status == "Đã chốt" || r.Status == "Đã chốt hợp đồng" ? "done" : (isBigOrder ? "big" : (r.Status == "Mới tiếp nhận" || string.IsNullOrEmpty(r.Status) ? "new" : "processing")));
-
-                            <tr class="rental-row" data-category="@categoryTag" style="@(isHidden ? "opacity: 0.6; background: #fafafa;" : "")">
+                            <tr class="rental-row" 
+                                data-id="@r.Id"
+                                data-is-new="@(isNew ? "1" : "0")" 
+                                data-is-big="@(isBigOrder && !isHidden ? "1" : "0")" 
+                                data-is-processing="@(isProcessing ? "1" : "0")" 
+                                data-is-done="@(isDone ? "1" : "0")" 
+                                data-is-hidden="@(isHidden ? "1" : "0")" 
+                                style="@(isHidden ? "opacity: 0.6; background: #fafafa;" : "")">
                                 <td>
                                     <strong>@r.FullName</strong>
                                     @if (!string.IsNullOrEmpty(r.CompanyName))
@@ -2429,6 +2437,26 @@
                                             </span>
                                         </div>
                                     }
+                                    <script type="application/json" id="rental-json-@r.Id">
+                                        @Html.Raw(System.Text.Json.JsonSerializer.Serialize(new {
+                                            id = r.Id,
+                                            fullName = r.FullName,
+                                            companyName = r.CompanyName ?? "",
+                                            phoneNumber = r.PhoneNumber,
+                                            email = r.Email,
+                                            cinemaName = r.CinemaName ?? (r.Cinema?.Name ?? "CGV Cinema"),
+                                            cinemaId = r.CinemaId ?? (r.Cinema?.Id ?? (cinemaObj?.Id ?? 0)),
+                                            serviceType = r.ServiceType,
+                                            guestCount = r.GuestCount,
+                                            expectedDate = r.ExpectedDate?.ToString("yyyy-MM-dd") ?? "",
+                                            status = r.Status ?? "Mới tiếp nhận",
+                                            estimatedBudget = r.EstimatedBudget ?? 0,
+                                            notes = r.Notes ?? "",
+                                            adminNotes = r.AdminNotes ?? "",
+                                            maxHall = maxHallSeats,
+                                            totalCinema = totalCinemaSeats
+                                        }))
+                                    </script>
                                 </td>
                                 <td>
                                     <strong>@(r.CinemaName ?? (r.Cinema?.Name ?? "CGV Cinema"))</strong>
@@ -2510,8 +2538,15 @@
                                     }
                                 </td>
                                 <td style="text-align: right; white-space: nowrap;">
+                                    @if (!isHidden && r.Status != "Đã chốt hợp đồng" && r.Status != "Đã chốt")
+                                    {
+                                        <button type="button" class="btn-action" style="background: #16a34a; color: white; font-weight: 700; margin-right: 4px;" 
+                                                onclick="openRentalDetailModalById(@r.Id, true)" title="Chốt ghế và hợp đồng cho đơn này">
+                                            ✅ Chốt đơn
+                                        </button>
+                                    }
                                     <button type="button" class="btn-action" style="background: #0284c7; color: white;" 
-                                            onclick="openRentalDetailModal(@r.Id, '@Html.Raw((r.FullName ?? "").Replace("'", "\\'"))', '@Html.Raw((r.CompanyName ?? "").Replace("'", "\\'"))', '@r.PhoneNumber', '@r.Email', '@Html.Raw((r.CinemaName ?? (r.Cinema?.Name ?? "")).Replace("'", "\\'"))', '@Html.Raw((r.ServiceType ?? "").Replace("'", "\\'"))', @r.GuestCount, '@(r.ExpectedDate?.ToString("yyyy-MM-dd") ?? "")', '@Html.Raw((r.Status ?? "Mới tiếp nhận").Replace("'", "\\'"))', @(r.EstimatedBudget ?? 0), '@Html.Raw((r.Notes ?? "").Replace("'", "\\'").Replace("\r", "").Replace("\n", " "))', '@Html.Raw((r.AdminNotes ?? "").Replace("'", "\\'").Replace("\r", "").Replace("\n", " "))', @maxHallSeats, @totalCinemaSeats)">
+                                            onclick="openRentalDetailModalById(@r.Id, false)">
                                         📋 Chi tiết & Báo giá
                                     </button>
                                     @if (isHidden)
@@ -2902,7 +2937,7 @@
 
 <!-- ===================== MODAL QUẢN LÝ PHÒNG CHIẾU CỦA RẠP (CRUD PHÒNG) ===================== -->
 <div class="modal-overlay" id="halls-modal">
-    <div class="modal-box" style="max-width: 840px;">
+    <div class="modal-box" style="max-width: 980px;">
         <div class="modal-header">
             <div>
                 <h3 id="halls-modal-title" style="margin: 0; font-family: 'Montserrat', sans-serif; font-size: 1.15rem; font-weight: 800; color: #111;">Quản Lý Phòng Chiếu</h3>
@@ -2946,7 +2981,7 @@
                         <th>Loại Phòng Chiếu</th>
                         <th>Sức Chứa Ghế</th>
                         <th>Suất Chiếu</th>
-                        <th style="text-align: right; width: 140px;">Thao Tác</th>
+                        <th style="text-align: right; width: 310px;">Thao Tác</th>
                     </tr>
                 </thead>
                 <tbody id="halls-table-body">
@@ -3033,6 +3068,154 @@
                 <button type="submit" class="btn-add">Cập Nhật Phòng</button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- ===================== MODAL CẤU HÌNH SƠ ĐỒ GHẾ (SEAT MATRIX) ===================== -->
+<div class="modal-overlay" id="modal-seat-matrix" style="z-index: 1050;">
+    <div class="modal-box" style="max-width: 1020px; width: 96%; max-height: 92vh; display: flex; flex-direction: column; padding: 20px 24px;">
+        <!-- Header -->
+        <div class="modal-header" style="margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+            <div>
+                <h3 id="sm-modal-title" style="margin: 0; font-family: 'Montserrat', sans-serif; font-size: 1.2rem; font-weight: 800; color: #111; display: flex; align-items: center; gap: 8px;">
+                    <span>💺</span> <span>Cấu Hình Sơ Đồ Ghế Phòng Chiếu</span>
+                </h3>
+                <p id="sm-modal-subtitle" style="margin: 3px 0 0; font-size: 0.8rem; color: #64748b;">Rạp: CGV | Phòng: Cinema 01</p>
+            </div>
+            <button type="button" class="modal-close" onclick="closeModal('modal-seat-matrix')">×</button>
+        </div>
+
+        <!-- Scrollable Body -->
+        <div style="flex: 1; overflow-y: auto; padding-right: 4px;">
+            <!-- Cảnh báo quy tắc nghiệp vụ khi phòng có suất chiếu mở bán -->
+            <div id="sm-lock-banner" style="display: none; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 12px 16px; margin-bottom: 14px; color: #b91c1c; font-size: 0.82rem; line-height: 1.5;">
+                <div style="display: flex; align-items: flex-start; gap: 10px;">
+                    <span style="font-size: 1.3rem;">🔒</span>
+                    <div>
+                        <strong style="font-size: 0.88rem; display: block; margin-bottom: 2px;">QUY TẮC NGHIỆP VỤ: Sơ đồ phòng chiếu đã có suất chiếu đang mở bán sẽ không được sửa!</strong>
+                        <span id="sm-lock-reason-text">Phòng chiếu này hiện có suất chiếu đang mở bán hoặc chưa kết thúc. Mọi tính năng chỉnh sửa và lưu sơ đồ ghế bị khóa để bảo vệ vé của khách hàng. Bạn chỉ có thể XEM sơ đồ ma trận hiện tại.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Thanh công cụ điều khiển kích thước Ma Trận (Hàng x Cột) -->
+            <div id="sm-controls-box" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 18px; margin-bottom: 14px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                    <!-- Nhập Hàng, Cột -->
+                    <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <label style="font-size: 0.78rem; font-weight: 700; color: #334155;">Số Hàng (Dãy A-Z):</label>
+                            <input type="number" id="sm-input-rows" min="2" max="15" value="6" class="form-control" style="width: 65px; padding: 5px 8px; font-size: 0.85rem; font-weight: 700; text-align: center;" />
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <label style="font-size: 0.78rem; font-weight: 700; color: #334155;">Số Cột (1-24):</label>
+                            <input type="number" id="sm-input-cols" min="3" max="24" value="14" class="form-control" style="width: 65px; padding: 5px 8px; font-size: 0.85rem; font-weight: 700; text-align: center;" />
+                        </div>
+                        <button type="button" class="btn-action" onclick="applyCustomMatrixDimensions()" style="background: #1e293b; color: white; padding: 6px 14px; font-size: 0.8rem; font-weight: 700; border-radius: 5px; cursor: pointer;">
+                            📐 Tạo Khung Lưới
+                        </button>
+                    </div>
+
+                    <!-- Mẫu thiết kế chuẩn CGV -->
+                    <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                        <span style="font-size: 0.75rem; font-weight: 700; color: #64748b;">Mẫu chuẩn CGV:</span>
+                        <button type="button" class="btn-action" onclick="applySeatMatrixPreset('cgv-standard')" style="background: white; border: 1px solid #cbd5e1; color: #334155; padding: 4px 10px; font-size: 0.76rem; border-radius: 4px; cursor: pointer;">
+                            Mẫu Chuẩn (6x14)
+                        </button>
+                        <button type="button" class="btn-action" onclick="applySeatMatrixPreset('cgv-large')" style="background: white; border: 1px solid #cbd5e1; color: #334155; padding: 4px 10px; font-size: 0.76rem; border-radius: 4px; cursor: pointer;">
+                            Phòng Lớn (8x16)
+                        </button>
+                        <button type="button" class="btn-action" onclick="applySeatMatrixPreset('cgv-small')" style="background: white; border: 1px solid #cbd5e1; color: #334155; padding: 4px 10px; font-size: 0.76rem; border-radius: 4px; cursor: pointer;">
+                            Phòng Nhỏ (5x10)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Bảng chọn cọ vẽ loại ghế (Brush Palette) -->
+                <div style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed #cbd5e1; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 0.78rem; font-weight: 700; color: #334155;">🖌️ Chọn công cụ cọ vẽ:</span>
+                        <button type="button" id="sm-brush-standard" class="btn-action sm-brush-btn active" onclick="setSeatBrush('Standard', this)" style="padding: 5px 12px; font-size: 0.78rem; border-radius: 4px; border: 2px solid #334155; background: #ffffff; color: #111; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                            <span style="display: inline-block; width: 12px; height: 12px; border-radius: 2px; background: white; border: 1px solid #666;"></span>
+                            Ghế Thường
+                        </button>
+                        <button type="button" id="sm-brush-vip" class="btn-action sm-brush-btn" onclick="setSeatBrush('VIP', this)" style="padding: 5px 12px; font-size: 0.78rem; border-radius: 4px; border: 1px solid #f97316; background: #fff7ed; color: #c2410c; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                            <span style="display: inline-block; width: 12px; height: 12px; border-radius: 2px; background: #fff0e8; border: 1px solid #d28a67;"></span>
+                            Ghế VIP (+15k)
+                        </button>
+                        <button type="button" id="sm-brush-aisle" class="btn-action sm-brush-btn" onclick="setSeatBrush('Aisle', this)" style="padding: 5px 12px; font-size: 0.78rem; border-radius: 4px; border: 1px solid #cbd5e1; background: #f1f5f9; color: #64748b; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                            <span style="display: inline-block; width: 12px; height: 12px; border-radius: 2px; background: #e2e8f0; border: 1px dashed #94a3b8;"></span>
+                            Lối Đi (Trống)
+                        </button>
+                    </div>
+
+                    <div style="font-size: 0.73rem; color: #64748b;">
+                        💡 <em>Nhấp ô để gán loại; hoặc nhấp vào tiêu đề Hàng / Cột để gán nhanh toàn bộ.</em>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Khung Màn Hình Chiếu & Ma Trận Ghế -->
+            <div style="background: #181818; border-radius: 8px; padding: 20px 16px 24px; margin-bottom: 14px; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);">
+                <!-- Màn hình chiếu cong CGV -->
+                <div style="max-width: 500px; margin: 0 auto 22px; text-align: center;">
+                    <div style="height: 10px; border-radius: 50% 50% 0 0 / 100% 100% 0 0; background: linear-gradient(180deg, #e30613 0%, rgba(227,6,19,0.2) 100%); box-shadow: 0 4px 15px rgba(227,6,19,0.5);"></div>
+                    <div style="font-size: 0.72rem; font-weight: 800; color: #ff9999; letter-spacing: 4px; text-transform: uppercase; margin-top: 4px;">
+                        MÀN HÌNH CHIẾU / SCREEN
+                    </div>
+                </div>
+
+                <!-- Lưới Ma Trận Ghế -->
+                <div id="sm-grid-scroll-wrap" style="overflow-x: auto; padding-bottom: 8px; text-align: center;">
+                    <div id="sm-matrix-container" style="display: inline-block; min-width: 320px;">
+                        <!-- Các ô ghế được render động bằng JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Thống kê & Báo cáo kiểm tra hợp lệ (Luồng 4a: Cảnh báo không có lối đi) -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 6px;">
+                <!-- Thống kê trực tiếp -->
+                <div style="background: white; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 14px; font-size: 0.8rem; display: flex; align-items: center; justify-content: space-around;">
+                    <div style="text-align: center;">
+                        <span style="color: #64748b; font-size: 0.72rem; display: block;">Tổng ghế bán:</span>
+                        <strong id="sm-stat-total" style="font-size: 1.15rem; color: #16a34a;">0</strong>
+                    </div>
+                    <div style="width: 1px; height: 26px; background: #e2e8f0;"></div>
+                    <div style="text-align: center;">
+                        <span style="color: #64748b; font-size: 0.72rem; display: block;">Ghế Thường:</span>
+                        <strong id="sm-stat-standard" style="font-size: 1.15rem; color: #334155;">0</strong>
+                    </div>
+                    <div style="width: 1px; height: 26px; background: #e2e8f0;"></div>
+                    <div style="text-align: center;">
+                        <span style="color: #64748b; font-size: 0.72rem; display: block;">Ghế VIP:</span>
+                        <strong id="sm-stat-vip" style="font-size: 1.15rem; color: #ea580c;">0</strong>
+                    </div>
+                    <div style="width: 1px; height: 26px; background: #e2e8f0;"></div>
+                    <div style="text-align: center;">
+                        <span style="color: #64748b; font-size: 0.72rem; display: block;">Ô Lối Đi:</span>
+                        <strong id="sm-stat-aisle" style="font-size: 1.15rem; color: #475569;">0</strong>
+                    </div>
+                </div>
+
+                <!-- Hộp thông báo / Cảnh báo hợp lệ thời gian thực -->
+                <div id="sm-validation-box" style="border-radius: 6px; padding: 10px 14px; font-size: 0.8rem; display: flex; align-items: center; line-height: 1.4; background: #fef3c7; border: 1px solid #fde68a; color: #92400e;">
+                    <span>⚠️ Đang kiểm tra tính hợp lệ của ma trận...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer Buttons -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding-top: 12px; border-top: 1px solid #e2e8f0;">
+            <button type="button" class="btn-action" style="background: #94a3b8; color: white; padding: 8px 18px;" onclick="closeModal('modal-seat-matrix')">
+                Đóng
+            </button>
+            <div style="display: flex; gap: 10px;">
+                <button type="button" id="sm-btn-save" class="btn-action" onclick="saveSeatMatrixConfig()" style="background: #e30613; color: white; font-weight: 700; padding: 9px 24px; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(227,6,19,0.3);">
+                    <span>💾</span> <span>Lưu Cấu Hình Sơ Đồ Ghế</span>
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -3346,14 +3529,14 @@
 </div>
 
 <!-- MODAL: CHI TIẾT & BÁO GIÁ SỰ KIỆN / THUÊ RẠP -->
-<div id="modal-rental-detail" class="modal-overlay" style="display: none;">
-    <div class="modal-content" style="max-width: 800px; width: 95%; max-height: 90vh; overflow-y: auto;">
+<div id="modal-rental-detail" class="modal-overlay">
+    <div class="modal-box" style="max-width: 860px; width: 96%; max-height: 92vh; overflow-y: auto; padding: 22px;">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e30613; padding-bottom: 12px; margin-bottom: 16px;">
             <div style="display: flex; align-items: center; gap: 10px;">
-                <h3 style="margin: 0; color: #111; font-size: 1.25rem;">📋 Chi Tiết & Báo Giá Sự Kiện / Thuê Rạp</h3>
+                <h3 style="margin: 0; color: #111; font-size: 1.25rem;">📋 Chi Tiết Đơn & Bố Trí Phòng Chốt Ghế</h3>
                 <span id="rental-modal-badge-big" class="badge" style="background: linear-gradient(135deg, #b71c1c, #e53935); color: #fff; font-weight: 700; font-size: 0.72rem; display: none;">⭐ Quy mô lớn (VIP)</span>
             </div>
-            <button type="button" onclick="closeModal('modal-rental-detail')" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #666;">&times;</button>
+            <button type="button" class="modal-close" onclick="closeModal('modal-rental-detail')" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #666;">&times;</button>
         </div>
 
         <form asp-controller="Admin" asp-action="UpdateRentalDetails" method="post" id="form-rental-details">
@@ -3393,6 +3576,42 @@
                         <div>Tổng sức chứa cụm rạp: <strong id="rental-modal-totalcinema"></strong> ghế</div>
                     </div>
                     <div id="rental-modal-capacity-status" style="margin-top: 10px;"></div>
+                </div>
+            </div>
+
+            <!-- KHU VỰC BỐ TRÍ PHÒNG CHIẾU & CHỐT GHẾ SỰ KIỆN -->
+            <div id="rental-modal-seat-allocation-box" style="background: #f0fdf4; border: 2px solid #86efac; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px dashed #86efac; padding-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                    <div style="font-weight: 800; color: #166534; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                        <span>💺 BỐ TRÍ PHÒNG CHIẾU & CHỐT GHẾ</span>
+                        <span class="badge" style="background: #16a34a; color: white; font-size: 0.7rem;">Bước Chốt Chỗ</span>
+                    </div>
+                    <div id="rental-modal-alloc-summary" style="font-size: 0.82rem; font-weight: 700; color: #15803d;">
+                        Đang chọn: 0 phòng (0 ghế / <span id="rental-alloc-target-guests">0</span> khách)
+                    </div>
+                </div>
+
+                <div id="rental-modal-halls-suggestion" style="font-size: 0.8rem; color: #166534; margin-bottom: 10px; line-height: 1.5; background: #dcfce7; padding: 8px 12px; border-radius: 5px;">
+                    <!-- Gợi ý tự động chia phòng khi số khách vượt phòng max -->
+                </div>
+
+                <!-- Danh sách phòng chiếu của rạp để Admin chọn -->
+                <div style="font-size: 0.78rem; font-weight: 700; color: #374151; margin-bottom: 6px;">
+                    Chọn các phòng chiếu để chốt giữ chỗ cho đoàn khách:
+                </div>
+                <div id="rental-modal-halls-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; margin-bottom: 12px;">
+                    <!-- Checkbox từng phòng render động -->
+                </div>
+
+                <!-- Thanh xác nhận chốt ghế -->
+                <div style="display: flex; justify-content: space-between; align-items: center; background: white; border: 1px solid #bbf7d0; border-radius: 6px; padding: 10px 14px; margin-top: 10px; flex-wrap: wrap; gap: 10px;">
+                    <div style="font-size: 0.82rem; color: #374151;">
+                        <span id="rental-alloc-status-badge" class="badge" style="background: #f59e0b; color: white;">Chưa đủ ghế</span>
+                        <span id="rental-alloc-status-text" style="margin-left: 6px; font-weight: 600;">Vui lòng chọn phòng chiếu để đáp ứng đủ số lượng khách.</span>
+                    </div>
+                    <button type="button" id="btn-confirm-seat-allocation" onclick="confirmAndChotGhe()" style="background: #16a34a; color: white; font-weight: 800; font-size: 0.85rem; border: none; padding: 8px 20px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(22,163,74,0.3);">
+                        <span>🎯</span> <span>Chốt Ghế & Đặt "Đã Chốt Hợp Đồng"</span>
+                    </button>
                 </div>
             </div>
 
@@ -3465,9 +3684,29 @@
 </div>
 
 @section Scripts {
+@{
+    var cinemaHallsMap = new Dictionary<string, object>();
+    if (Model.Cinemas != null)
+    {
+        foreach (var c in Model.Cinemas)
+        {
+            var hallsList = (c.CinemaHalls ?? new List<Du_an_CGV.Models.CinemaHall>())
+                .Where(h => !h.IsDeleted)
+                .Select(h => new { id = h.Id, name = h.Name, hallType = h.HallType, totalSeats = h.TotalSeats })
+                .ToList();
+            cinemaHallsMap[c.Id.ToString()] = hallsList;
+            if (!string.IsNullOrWhiteSpace(c.Name))
+            {
+                cinemaHallsMap[c.Name.Trim()] = hallsList;
+            }
+        }
+    }
+}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
     // @@ts-nocheck
+    window.allCinemasHalls = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(cinemaHallsMap));
+
     // Tab switching
     function switchAdminTab(tabName, el) {
         document.querySelectorAll('.admin-nav-item').forEach(item => item.classList.remove('active'));
@@ -3494,11 +3733,19 @@
     }
 
     function openModal(id) {
-        document.getElementById(id).classList.add('active');
+        const el = document.getElementById(id);
+        if (el) {
+            el.classList.add('active');
+            el.style.display = 'flex';
+        }
     }
 
     function closeModal(id) {
-        document.getElementById(id).classList.remove('active');
+        const el = document.getElementById(id);
+        if (el) {
+            el.classList.remove('active');
+            el.style.display = 'none';
+        }
     }
 
     // Movies Modal logic
@@ -3774,6 +4021,7 @@
                         <td><strong>${h.totalSeats}</strong> ghế <small style="color:#666;">(${h.seatsCount} ghế DB)</small></td>
                         <td><small>${h.showtimesCount} suất chiếu</small></td>
                         <td style="text-align:right;white-space:nowrap;">
+                            <button type="button" class="btn-action" style="background:#4338ca;color:white;font-weight:600;padding:5px 12px;margin-right:4px;" onclick="openSeatMatrixModal(${h.id}, '${h.name.replace(/'/g, "\\'")}')" title="Cấu hình vẽ ma trận sơ đồ ghế cho phòng chiếu này">💺 Cấu hình sơ đồ ghế</button>
                             <button type="button" class="btn-action btn-edit" onclick="openEditHallModal(${h.id})">Sửa</button>
                             ${h.isDeleted ? `
                                 <form action="@Url.Action("RestoreCinemaHall", "Admin")" method="post" style="display:inline;">
@@ -4164,7 +4412,7 @@
     // ==========================================================
     // CASCADING FILTER LOGIC (TỈNH -> RẠP) CHO GIAO DỊCH & THAO TÁC
     // ==========================================================
-    const allCinemasData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Cinemas.Select(c => new { id = c.Id, name = c.Name, city = c.City })));
+    const allCinemasData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize((Model.Cinemas ?? new List<Du_an_CGV.Models.Cinema>()).Select(c => new { id = c.Id, name = c.Name, city = c.City })));
 
     // 1. Khi chọn Tỉnh ở Lịch sử giao dịch
     function onTransCityChanged() {
@@ -4507,6 +4755,7 @@
     // RENTAL / EVENT MANAGEMENT & QUOTATION JS
     // ==========================================
     let currentRentalCalculatedBudget = 0;
+    let currentRentalTargetGuests = 0;
 
     function filterRentals(category, btn) {
         document.querySelectorAll('.btn-filter-rental').forEach(b => {
@@ -4520,65 +4769,81 @@
             btn.classList.add('active');
         }
         document.querySelectorAll('.rental-row').forEach(row => {
-            const cat = row.getAttribute('data-category');
-            if (category === 'all' || cat === category) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
+            const isHidden = row.getAttribute('data-is-hidden') === '1';
+            let show = false;
+
+            if (category === 'all') {
+                show = !isHidden;
+            } else if (category === 'new') {
+                show = row.getAttribute('data-is-new') === '1';
+            } else if (category === 'big') {
+                show = row.getAttribute('data-is-big') === '1';
+            } else if (category === 'processing') {
+                show = row.getAttribute('data-is-processing') === '1';
+            } else if (category === 'done') {
+                show = row.getAttribute('data-is-done') === '1';
+            } else if (category === 'hidden') {
+                show = isHidden;
             }
+
+            row.style.display = show ? '' : 'none';
         });
     }
 
-    function openRentalDetailModal(id, name, company, phone, email, cinema, service, guestCount, date, status, budget, notes, adminNotes, maxHall, totalCinema) {
-        document.getElementById('rental-modal-id').value = id;
-        document.getElementById('rental-modal-name').textContent = name || 'Chưa cung cấp';
-        document.getElementById('rental-modal-company').textContent = company ? company : '(Khách hàng cá nhân)';
-        document.getElementById('rental-modal-phone').textContent = phone || 'Chưa có SĐT';
-        document.getElementById('rental-modal-email').textContent = email || 'Chưa có Email';
-        document.getElementById('rental-modal-service').textContent = service || 'Thuê rạp / Vé nhóm';
-        document.getElementById('rental-modal-guestcount').textContent = (guestCount || 0).toLocaleString('vi-VN');
-        document.getElementById('rental-modal-date').textContent = date ? new Date(date).toLocaleDateString('vi-VN') : 'Chưa định ngày';
-        document.getElementById('rental-modal-notes').textContent = notes || 'Không có ghi chú thêm từ khách hàng.';
+    function openRentalDetailModalById(id, isQuickChot = false) {
+        const dataElem = document.getElementById('rental-json-' + id);
+        if (!dataElem) return;
+        const r = JSON.parse(dataElem.textContent);
+
+        document.getElementById('rental-modal-id').value = r.id;
+        document.getElementById('rental-modal-name').textContent = r.fullName || 'Chưa cung cấp';
+        document.getElementById('rental-modal-company').textContent = r.companyName ? r.companyName : '(Khách hàng cá nhân)';
+        document.getElementById('rental-modal-phone').textContent = r.phoneNumber || 'Chưa có SĐT';
+        document.getElementById('rental-modal-email').textContent = r.email || 'Chưa có Email';
+        document.getElementById('rental-modal-service').textContent = r.serviceType || 'Thuê rạp / Vé nhóm';
+        document.getElementById('rental-modal-guestcount').textContent = (r.guestCount || 0).toLocaleString('vi-VN');
+        document.getElementById('rental-modal-date').textContent = r.expectedDate ? new Date(r.expectedDate).toLocaleDateString('vi-VN') : 'Chưa định ngày';
+        document.getElementById('rental-modal-notes').textContent = r.notes || 'Không có ghi chú thêm từ khách hàng.';
 
         // Cinema capacity status
-        document.getElementById('rental-modal-cinema').textContent = cinema || 'CGV Cinema';
-        document.getElementById('rental-modal-maxhall').textContent = (maxHall || 96).toLocaleString('vi-VN');
-        document.getElementById('rental-modal-totalcinema').textContent = (totalCinema || 300).toLocaleString('vi-VN');
+        document.getElementById('rental-modal-cinema').textContent = r.cinemaName || 'CGV Cinema';
+        document.getElementById('rental-modal-maxhall').textContent = (r.maxHall || 96).toLocaleString('vi-VN');
+        document.getElementById('rental-modal-totalcinema').textContent = (r.totalCinema || 300).toLocaleString('vi-VN');
 
-        const isBig = (guestCount >= 50) || Boolean(company && company.trim());
+        const isBig = (r.guestCount >= 50) || Boolean(r.companyName && r.companyName.trim());
         const bigBadge = document.getElementById('rental-modal-badge-big');
         if (bigBadge) {
             bigBadge.style.display = isBig ? 'inline-flex' : 'none';
         }
 
         const capStatusBox = document.getElementById('rental-modal-capacity-status');
-        if (guestCount > totalCinema) {
+        if (r.guestCount > r.totalCinema) {
             capStatusBox.innerHTML = `
                 <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 4px; padding: 8px 10px; font-size: 0.78rem; color: #991b1b;">
-                    <div style="font-weight: 700;">🚨 Vượt quá tổng sức chứa cả cụm rạp (${totalCinema} ghế)</div>
+                    <div style="font-weight: 700;">🚨 Vượt quá tổng sức chứa cả cụm rạp (${r.totalCinema} ghế)</div>
                     <div style="margin-top: 2px;">Cần tư vấn khách đổi sang cụm rạp có quy mô lớn hơn hoặc chia ca tổ chức.</div>
                 </div>`;
-        } else if (guestCount > maxHall) {
-            const rooms = Math.ceil(guestCount / maxHall);
+        } else if (r.guestCount > r.maxHall) {
+            const rooms = Math.ceil(r.guestCount / r.maxHall);
             capStatusBox.innerHTML = `
                 <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 4px; padding: 8px 10px; font-size: 0.78rem; color: #9a3412;">
-                    <div style="font-weight: 700;">⚠️ Vượt sức chứa phòng đơn lớn nhất (${maxHall} ghế)</div>
+                    <div style="font-weight: 700;">⚠️ Vượt sức chứa phòng đơn lớn nhất (${r.maxHall} ghế)</div>
                     <div style="margin-top: 2px;">Đề xuất: Điều phối phân bổ <strong>${rooms} phòng chiếu song song</strong> hoặc tổ chức 2 ca.</div>
                 </div>`;
         } else {
             capStatusBox.innerHTML = `
                 <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; padding: 8px 10px; font-size: 0.78rem; color: #166534;">
                     <div style="font-weight: 700;">✅ Phù hợp sức chứa phòng đơn</div>
-                    <div style="margin-top: 2px;">Phòng lớn nhất (${maxHall} ghế) đáp ứng tốt quy mô ${guestCount} khách.</div>
+                    <div style="margin-top: 2px;">Phòng lớn nhất (${r.maxHall} ghế) đáp ứng tốt quy mô ${r.guestCount} khách.</div>
                 </div>`;
         }
 
         // Quotation Calculator
         const ticketRate = 80000;
         const comboRate = 55000;
-        const techFee = (service && service.includes('Thuê trọn rạp')) ? 2000000 : 1000000;
-        const totalTickets = (guestCount || 0) * ticketRate;
-        const totalCombos = (guestCount || 0) * comboRate;
+        const techFee = (r.serviceType && r.serviceType.includes('Thuê trọn rạp')) ? 2000000 : 1000000;
+        const totalTickets = (r.guestCount || 0) * ticketRate;
+        const totalCombos = (r.guestCount || 0) * comboRate;
         const calcTotal = totalTickets + totalCombos + techFee;
         currentRentalCalculatedBudget = calcTotal;
 
@@ -4587,24 +4852,157 @@
         document.getElementById('rental-calc-tech').textContent = techFee.toLocaleString('vi-VN') + ' đ';
         document.getElementById('rental-calc-total').textContent = calcTotal.toLocaleString('vi-VN') + ' đ';
 
-        // Current status & budget & notes
+        // Status & Budget & Admin Notes
         const statusSelect = document.getElementById('rental-modal-status-select');
         if (statusSelect) {
-            statusSelect.value = status || 'Mới tiếp nhận';
+            statusSelect.value = isQuickChot ? 'Đã chốt hợp đồng' : (r.status || 'Mới tiếp nhận');
             if (!statusSelect.value) statusSelect.value = 'Mới tiếp nhận';
         }
 
         const budgetInput = document.getElementById('rental-modal-budget-input');
         if (budgetInput) {
-            budgetInput.value = budget > 0 ? budget : '';
+            budgetInput.value = (r.estimatedBudget > 0) ? r.estimatedBudget : currentRentalCalculatedBudget;
         }
 
         const adminNotesInput = document.getElementById('rental-modal-adminnotes');
         if (adminNotesInput) {
-            adminNotesInput.value = adminNotes || '';
+            adminNotesInput.value = r.adminNotes || '';
         }
 
+        // Bố trí phòng & chốt ghế
+        currentRentalTargetGuests = r.guestCount || 0;
+        const allocGuestsElem = document.getElementById('rental-alloc-target-guests');
+        if (allocGuestsElem) allocGuestsElem.textContent = currentRentalTargetGuests.toLocaleString('vi-VN');
+
+        const cinemaKey = r.cinemaName ? r.cinemaName.trim() : '';
+        const halls = (window.allCinemasHalls && (window.allCinemasHalls[r.cinemaId] || window.allCinemasHalls[cinemaKey])) || [];
+
+        const hallsContainer = document.getElementById('rental-modal-halls-list');
+        const suggestBox = document.getElementById('rental-modal-halls-suggestion');
+
+        if (suggestBox) {
+            if (currentRentalTargetGuests > r.maxHall) {
+                const neededRooms = Math.ceil(currentRentalTargetGuests / (r.maxHall || 60));
+                suggestBox.innerHTML = `💡 <strong>Hệ thống gợi ý:</strong> Đơn yêu cầu <strong>${currentRentalTargetGuests} khách</strong> (vượt phòng max ${r.maxHall} ghế). Bạn nên chọn <strong>${neededRooms} phòng chiếu song song</strong> (ví dụ Cinema 01 + Cinema 02) để đáp ứng đủ số ghế cho đoàn.`;
+                suggestBox.style.display = 'block';
+            } else {
+                suggestBox.innerHTML = `💡 <strong>Hệ thống gợi ý:</strong> Đơn yêu cầu <strong>${currentRentalTargetGuests} khách</strong>, bạn chỉ cần chọn 1 phòng chiếu có sức chứa phù hợp.`;
+                suggestBox.style.display = 'block';
+            }
+        }
+
+        if (hallsContainer) {
+            if (halls && halls.length > 0) {
+                let hHtml = '';
+                let runningSeats = 0;
+                halls.forEach((h) => {
+                    const isAutoChecked = runningSeats < currentRentalTargetGuests;
+                    if (isAutoChecked) runningSeats += h.totalSeats;
+                    hHtml += `
+                        <label style="display: flex; align-items: center; gap: 8px; background: white; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 10px; cursor: pointer; user-select: none;">
+                            <input type="checkbox" class="rental-hall-chk" value="${h.id}" data-name="${h.name}" data-seats="${h.totalSeats}" ${isAutoChecked ? 'checked' : ''} onchange="recalculateRentalAllocation()" style="width: 16px; height: 16px; cursor: pointer;" />
+                            <div style="font-size: 0.8rem;">
+                                <strong>${h.name}</strong> <span style="color: #64748b;">(${h.hallType})</span>
+                                <div style="color: #16a34a; font-weight: 700;">${h.totalSeats} ghế</div>
+                            </div>
+                        </label>`;
+                });
+                hallsContainer.innerHTML = hHtml;
+            } else {
+                hallsContainer.innerHTML = '<div style="color: #888; font-size: 0.8rem; padding: 10px;">Chưa có dữ liệu phòng chiếu của cụm rạp này.</div>';
+            }
+        }
+
+        recalculateRentalAllocation();
         openModal('modal-rental-detail');
+
+        if (isQuickChot) {
+            setTimeout(() => {
+                document.getElementById('rental-modal-seat-allocation-box')?.scrollIntoView({ behavior: 'smooth' });
+            }, 200);
+        }
+    }
+
+    function openRentalDetailModal(id) {
+        openRentalDetailModalById(id, false);
+    }
+
+    function recalculateRentalAllocation() {
+        let totalSeats = 0;
+        const selectedNames = [];
+        document.querySelectorAll('.rental-hall-chk:checked').forEach(chk => {
+            totalSeats += parseInt(chk.getAttribute('data-seats') || 0);
+            selectedNames.push(chk.getAttribute('data-name') + ' (' + chk.getAttribute('data-seats') + ' ghế)');
+        });
+
+        const summary = document.getElementById('rental-modal-alloc-summary');
+        const badge = document.getElementById('rental-alloc-status-badge');
+        const text = document.getElementById('rental-alloc-status-text');
+
+        if (summary) {
+            summary.innerHTML = `Đang chọn: <strong>${selectedNames.length} phòng</strong> (<strong>${totalSeats}</strong> / ${currentRentalTargetGuests} khách)`;
+        }
+
+        if (totalSeats >= currentRentalTargetGuests && totalSeats > 0) {
+            if (badge) {
+                badge.style.background = '#16a34a';
+                badge.textContent = '✅ ĐỦ GHẾ';
+            }
+            if (text) {
+                text.innerHTML = `Đã bố trí <strong>${totalSeats} ghế</strong> cho ${currentRentalTargetGuests} khách. Sẵn sàng chốt hợp đồng!`;
+            }
+        } else {
+            const missing = currentRentalTargetGuests - totalSeats;
+            if (badge) {
+                badge.style.background = '#f59e0b';
+                badge.textContent = '⚠️ THIẾU ' + missing + ' GHẾ';
+            }
+            if (text) {
+                text.innerHTML = `Còn thiếu <strong>${missing} ghế</strong>. Hãy chọn thêm phòng chiếu bên trên.`;
+            }
+        }
+    }
+
+    function confirmAndChotGhe() {
+        const selectedHalls = [];
+        let totalSeats = 0;
+        document.querySelectorAll('.rental-hall-chk:checked').forEach(chk => {
+            selectedHalls.push(chk.getAttribute('data-name') + ' (' + chk.getAttribute('data-seats') + ' ghế)');
+            totalSeats += parseInt(chk.getAttribute('data-seats') || 0);
+        });
+
+        if (selectedHalls.length === 0) {
+            alert('⚠️ Vui lòng chọn ít nhất 1 phòng chiếu để chốt ghế cho đơn này!');
+            return;
+        }
+
+        if (totalSeats < currentRentalTargetGuests) {
+            if (!confirm(`⚠️ Số ghế bạn chọn (${totalSeats} ghế) ít hơn số khách yêu cầu (${currentRentalTargetGuests} khách)!\nBạn có chắc chắn vẫn muốn chốt đơn này không?`)) {
+                return;
+            }
+        }
+
+        const statusSelect = document.getElementById('rental-modal-status-select');
+        if (statusSelect) statusSelect.value = 'Đã chốt hợp đồng';
+
+        const budgetInput = document.getElementById('rental-modal-budget-input');
+        if (budgetInput && (!budgetInput.value || budgetInput.value === '0')) {
+            budgetInput.value = currentRentalCalculatedBudget;
+        }
+
+        const adminNotesInput = document.getElementById('rental-modal-adminnotes');
+        if (adminNotesInput) {
+            const nowStr = new Date().toLocaleString('vi-VN');
+            const budgetVal = budgetInput ? parseInt(budgetInput.value || 0).toLocaleString('vi-VN') + ' đ' : 'Chưa nhập';
+            const newNote = `[ĐÃ CHỐT GHẾ & HỢP ĐỒNG ${nowStr}]\n- Bố trí phòng: ${selectedHalls.join(' + ')} (Tổng ${totalSeats} ghế)\n- Khách: ${currentRentalTargetGuests} người\n- Dự toán: ${budgetVal}\n- Trạng thái: Đã chốt hợp đồng, đã thông báo nhân viên rạp giữ phòng.`;
+            if (adminNotesInput.value.trim()) {
+                adminNotesInput.value = newNote + '\n---\n' + adminNotesInput.value;
+            } else {
+                adminNotesInput.value = newNote;
+            }
+        }
+
+        document.getElementById('form-rental-details').submit();
     }
 
     function applyRentalCalcToBudget() {
@@ -5199,5 +5597,481 @@
             </text>
         }
     });
+
+    // ==========================================
+    // QUẢN LÝ SƠ ĐỒ GHẾ PHÒNG CHIẾU (SEAT MATRIX)
+    // ==========================================
+    let currentSmHallId = null;
+    let currentSmHallName = '';
+    let currentSmCinemaName = '';
+    let currentSmCanEdit = true;
+    let currentSmLockReason = '';
+    let currentSmBrush = 'Standard'; // 'Standard' | 'VIP' | 'Aisle'
+    let currentSmRows = 6;
+    let currentSmCols = 14;
+    let currentSmGrid = []; // 2D array of string: 'Standard' | 'VIP' | 'Aisle'
+
+    function openSeatMatrixModal(hallId, hallName) {
+        currentSmHallId = hallId;
+        currentSmHallName = hallName || ('Phòng ' + hallId);
+
+        const titleElem = document.getElementById('sm-modal-title');
+        const subTitleElem = document.getElementById('sm-modal-subtitle');
+        if (titleElem) titleElem.innerHTML = `<span>💺</span> <span>Cấu Hình Sơ Đồ Ghế: ${currentSmHallName}</span>`;
+        if (subTitleElem) subTitleElem.innerText = `Đang tải thông tin phòng chiếu #${hallId}...`;
+
+        fetch(`/Admin/GetHallSeatMatrix?hallId=${hallId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) {
+                    alert(data.message || 'Không thể tải sơ đồ phòng chiếu!');
+                    return;
+                }
+
+                currentSmCinemaName = data.cinemaName || 'CGV Cinemas';
+                currentSmCanEdit = data.canEdit !== false;
+                currentSmLockReason = data.lockReason || '';
+
+                if (subTitleElem) {
+                    subTitleElem.innerText = `Rạp: ${currentSmCinemaName} | Phòng: ${data.hallName} (${data.hallType || '2D Digital'})`;
+                }
+
+                // Xử lý cờ khóa theo quy tắc nghiệp vụ
+                const lockBanner = document.getElementById('sm-lock-banner');
+                const lockReasonText = document.getElementById('sm-lock-reason-text');
+                const controlsBox = document.getElementById('sm-controls-box');
+                const btnSave = document.getElementById('sm-btn-save');
+
+                if (!currentSmCanEdit) {
+                    if (lockBanner) lockBanner.style.display = 'block';
+                    if (lockReasonText) lockReasonText.innerText = currentSmLockReason;
+                    if (btnSave) {
+                        btnSave.disabled = true;
+                        btnSave.style.opacity = '0.5';
+                        btnSave.style.cursor = 'not-allowed';
+                        btnSave.title = currentSmLockReason;
+                    }
+                    if (controlsBox) {
+                        controlsBox.style.opacity = '0.6';
+                        controlsBox.style.pointerEvents = 'none';
+                    }
+                } else {
+                    if (lockBanner) lockBanner.style.display = 'none';
+                    if (btnSave) {
+                        btnSave.disabled = false;
+                        btnSave.style.opacity = '1';
+                        btnSave.style.cursor = 'pointer';
+                        btnSave.title = 'Lưu cấu hình sơ đồ ghế';
+                    }
+                    if (controlsBox) {
+                        controlsBox.style.opacity = '1';
+                        controlsBox.style.pointerEvents = 'auto';
+                    }
+                }
+
+                // Khởi tạo ma trận: ưu tiên savedMatrixJson nếu có
+                let loaded = false;
+                if (data.savedMatrixJson) {
+                    try {
+                        const parsed = JSON.parse(data.savedMatrixJson);
+                        if (parsed && parsed.Rows && parsed.Cols && parsed.Grid && Array.isArray(parsed.Grid)) {
+                            currentSmRows = parsed.Rows;
+                            currentSmCols = parsed.Cols;
+                            currentSmGrid = parsed.Grid;
+                            loaded = true;
+                        }
+                    } catch (e) {
+                        console.error('Lỗi phân tích cú pháp SeatMatrixJson:', e);
+                    }
+                }
+
+                if (!loaded) {
+                    // Mẫu chuẩn 6 hàng x 14 cột, có 2 lối đi ở cột 4 và cột 11 (index 3 và 10)
+                    initPresetGrid(6, 14, [3, 10], 3);
+                }
+
+                // Đồng bộ giá trị input
+                const inputRows = document.getElementById('sm-input-rows');
+                const inputCols = document.getElementById('sm-input-cols');
+                if (inputRows) inputRows.value = currentSmRows;
+                if (inputCols) inputCols.value = currentSmCols;
+
+                // Reset cọ vẽ
+                setSeatBrush('Standard');
+
+                // Render lưới ghế
+                renderSeatMatrixGrid();
+                openModal('modal-seat-matrix');
+            })
+            .catch(err => {
+                console.error('Lỗi khi tải sơ đồ ghế:', err);
+                alert('Không thể kết nối đến máy chủ để lấy sơ đồ ghế!');
+            });
+    }
+
+    function initPresetGrid(rows, cols, aisleCols, vipFromRow) {
+        currentSmRows = rows;
+        currentSmCols = cols;
+        currentSmGrid = [];
+        for (let r = 0; r < rows; r++) {
+            const rowArr = [];
+            const isVipRow = r >= vipFromRow;
+            for (let c = 0; c < cols; c++) {
+                if (aisleCols && aisleCols.includes(c)) {
+                    rowArr.push('Aisle');
+                } else if (isVipRow) {
+                    rowArr.push('VIP');
+                } else {
+                    rowArr.push('Standard');
+                }
+            }
+            currentSmGrid.push(rowArr);
+        }
+    }
+
+    function applySeatMatrixPreset(preset) {
+        if (!currentSmCanEdit) return;
+
+        if (preset === 'cgv-standard') {
+            initPresetGrid(6, 14, [3, 10], 3);
+        } else if (preset === 'cgv-large') {
+            initPresetGrid(8, 16, [4, 11], 4);
+        } else if (preset === 'cgv-small') {
+            initPresetGrid(5, 10, [2, 7], 3);
+        }
+
+        const inputRows = document.getElementById('sm-input-rows');
+        const inputCols = document.getElementById('sm-input-cols');
+        if (inputRows) inputRows.value = currentSmRows;
+        if (inputCols) inputCols.value = currentSmCols;
+
+        renderSeatMatrixGrid();
+    }
+
+    function applyCustomMatrixDimensions() {
+        if (!currentSmCanEdit) return;
+
+        const inputRows = document.getElementById('sm-input-rows');
+        const inputCols = document.getElementById('sm-input-cols');
+        let newRows = parseInt(inputRows ? inputRows.value : 6) || 6;
+        let newCols = parseInt(inputCols ? inputCols.value : 14) || 14;
+
+        if (newRows < 2 || newRows > 15) {
+            alert('⚠️ Số hàng phải từ 2 đến 15 (tương ứng dãy ghế A đến O)!');
+            return;
+        }
+        if (newCols < 3 || newCols > 24) {
+            alert('⚠️ Số cột phải từ 3 đến 24!');
+            return;
+        }
+
+        const oldGrid = currentSmGrid;
+        const newGrid = [];
+
+        for (let r = 0; r < newRows; r++) {
+            const rowArr = [];
+            for (let c = 0; c < newCols; c++) {
+                if (oldGrid && oldGrid[r] && oldGrid[r][c]) {
+                    rowArr.push(oldGrid[r][c]);
+                } else {
+                    // Mặc định phân bố lối đi nếu mở rộng
+                    if (c === Math.floor(newCols / 3) || c === Math.floor(newCols * 2 / 3)) {
+                        rowArr.push('Aisle');
+                    } else if (r >= Math.floor(newRows / 2)) {
+                        rowArr.push('VIP');
+                    } else {
+                        rowArr.push('Standard');
+                    }
+                }
+            }
+            newGrid.push(rowArr);
+        }
+
+        currentSmRows = newRows;
+        currentSmCols = newCols;
+        currentSmGrid = newGrid;
+        renderSeatMatrixGrid();
+    }
+
+    function setSeatBrush(brushType, btnElem) {
+        currentSmBrush = brushType;
+
+        const buttons = {
+            'Standard': document.getElementById('sm-brush-standard'),
+            'VIP': document.getElementById('sm-brush-vip'),
+            'Aisle': document.getElementById('sm-brush-aisle')
+        };
+
+        for (const [key, btn] of Object.entries(buttons)) {
+            if (!btn) continue;
+            if (key === brushType) {
+                btn.style.outline = '2px solid #e30613';
+                btn.style.outlineOffset = '2px';
+                btn.style.fontWeight = '800';
+            } else {
+                btn.style.outline = 'none';
+                btn.style.fontWeight = '600';
+            }
+        }
+    }
+
+    function onSeatCellClick(r, c) {
+        if (!currentSmCanEdit) {
+            alert(currentSmLockReason || 'Phòng chiếu này hiện có suất chiếu mở bán nên không thể chỉnh sửa!');
+            return;
+        }
+        if (!currentSmGrid[r]) return;
+
+        // Nếu ô đang cùng loại với cọ hiện tại, luân chuyển Standard -> VIP -> Aisle -> Standard
+        if (currentSmGrid[r][c] === currentSmBrush) {
+            if (currentSmBrush === 'Standard') currentSmGrid[r][c] = 'VIP';
+            else if (currentSmBrush === 'VIP') currentSmGrid[r][c] = 'Aisle';
+            else currentSmGrid[r][c] = 'Standard';
+        } else {
+            currentSmGrid[r][c] = currentSmBrush;
+        }
+
+        renderSeatMatrixGrid();
+    }
+
+    function onRowHeaderClick(r) {
+        if (!currentSmCanEdit) return;
+        if (!currentSmGrid[r]) return;
+
+        for (let c = 0; c < currentSmCols; c++) {
+            currentSmGrid[r][c] = currentSmBrush;
+        }
+        renderSeatMatrixGrid();
+    }
+
+    function onColHeaderClick(c) {
+        if (!currentSmCanEdit) return;
+
+        for (let r = 0; r < currentSmRows; r++) {
+            if (currentSmGrid[r]) {
+                currentSmGrid[r][c] = currentSmBrush;
+            }
+        }
+        renderSeatMatrixGrid();
+    }
+
+    function renderSeatMatrixGrid() {
+        const container = document.getElementById('sm-matrix-container');
+        if (!container) return;
+
+        let totalStandard = 0;
+        let totalVip = 0;
+        let totalAisle = 0;
+
+        let html = '<div style="display: inline-flex; flex-direction: column; gap: 6px;">';
+
+        // Hàng Header Cột (1..Cols)
+        html += '<div style="display: flex; align-items: center; gap: 5px; justify-content: center; margin-bottom: 2px;">';
+        html += '<div style="width: 28px; text-align: center; font-size: 0.7rem; color: #888; font-weight: 700;">Hàng</div>';
+        for (let c = 0; c < currentSmCols; c++) {
+            html += `
+                <div onclick="onColHeaderClick(${c})" title="Nhấp để gán cọ vẽ cho toàn bộ Cột ${c + 1}"
+                     style="width: 34px; height: 20px; line-height: 20px; text-align: center; font-size: 0.68rem; font-weight: 700; color: #94a3b8; cursor: pointer; border-radius: 3px; background: rgba(255,255,255,0.06); transition: background 0.15s;"
+                     onmouseover="this.style.background='rgba(227,6,19,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">
+                    ${c + 1}
+                </div>`;
+        }
+        html += '<div style="width: 28px; text-align: center; font-size: 0.7rem; color: #888; font-weight: 700;">Hàng</div>';
+        html += '</div>';
+
+        // Từng hàng ghế
+        for (let r = 0; r < currentSmRows; r++) {
+            const rowLabel = String.fromCharCode(65 + r);
+            let seatNumInRow = 1;
+
+            html += '<div style="display: flex; align-items: center; gap: 5px; justify-content: center;">';
+            // Header bên trái hàng
+            html += `
+                <div onclick="onRowHeaderClick(${r})" title="Nhấp để gán cọ vẽ cho toàn bộ Hàng ${rowLabel}"
+                     style="width: 28px; height: 30px; line-height: 30px; text-align: center; font-weight: 800; font-size: 0.8rem; color: #ff9999; cursor: pointer; border-radius: 4px; background: rgba(255,255,255,0.08); transition: background 0.15s;"
+                     onmouseover="this.style.background='rgba(227,6,19,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">
+                    ${rowLabel}
+                </div>`;
+
+            // Các ô trong hàng
+            for (let c = 0; c < currentSmCols; c++) {
+                const cellType = (currentSmGrid[r] && currentSmGrid[r][c]) ? currentSmGrid[r][c] : 'Standard';
+
+                if (cellType === 'Aisle') {
+                    totalAisle++;
+                    html += `
+                        <div onclick="onSeatCellClick(${r}, ${c})"
+                             title="Lối đi (Cột ${c + 1}) - Nhấp để thay đổi"
+                             style="width: 34px; height: 30px; line-height: 28px; text-align: center; font-size: 0.75rem; color: #64748b; background: rgba(255,255,255,0.03); border: 1px dashed rgba(255,255,255,0.25); border-radius: 4px; cursor: pointer; user-select: none;">
+                            ·
+                        </div>`;
+                } else if (cellType === 'VIP') {
+                    totalVip++;
+                    const seatCode = `${rowLabel}${seatNumInRow}`;
+                    seatNumInRow++;
+                    html += `
+                        <div onclick="onSeatCellClick(${r}, ${c})"
+                             title="Ghế VIP: ${seatCode} - Nhấp để thay đổi"
+                             style="width: 34px; height: 30px; line-height: 28px; text-align: center; font-size: 0.7rem; font-weight: 800; color: #c2410c; background: #fff0e8; border: 1px solid #d28a67; border-radius: 4px; cursor: pointer; user-select: none; box-shadow: 0 1px 3px rgba(0,0,0,0.25);">
+                            ${seatCode}
+                        </div>`;
+                } else {
+                    totalStandard++;
+                    const seatCode = `${rowLabel}${seatNumInRow}`;
+                    seatNumInRow++;
+                    html += `
+                        <div onclick="onSeatCellClick(${r}, ${c})"
+                             title="Ghế Thường: ${seatCode} - Nhấp để thay đổi"
+                             style="width: 34px; height: 30px; line-height: 28px; text-align: center; font-size: 0.7rem; font-weight: 700; color: #1e293b; background: #ffffff; border: 1px solid #94a3b8; border-radius: 4px; cursor: pointer; user-select: none; box-shadow: 0 1px 3px rgba(0,0,0,0.25);">
+                            ${seatCode}
+                        </div>`;
+                }
+            }
+
+            // Header bên phải hàng
+            html += `
+                <div onclick="onRowHeaderClick(${r})" title="Nhấp để gán cọ vẽ cho toàn bộ Hàng ${rowLabel}"
+                     style="width: 28px; height: 30px; line-height: 30px; text-align: center; font-weight: 800; font-size: 0.8rem; color: #ff9999; cursor: pointer; border-radius: 4px; background: rgba(255,255,255,0.08); transition: background 0.15s;"
+                     onmouseover="this.style.background='rgba(227,6,19,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">
+                    ${rowLabel}
+                </div>`;
+
+            html += '</div>';
+        }
+
+        html += '</div>';
+        container.innerHTML = html;
+
+        // Cập nhật số liệu & cảnh báo hợp lệ
+        updateMatrixStatsAndValidation(totalStandard, totalVip, totalAisle);
+    }
+
+    function updateMatrixStatsAndValidation(totalStandard, totalVip, totalAisle) {
+        const totalActualSeats = totalStandard + totalVip;
+
+        const statTotal = document.getElementById('sm-stat-total');
+        const statStandard = document.getElementById('sm-stat-standard');
+        const statVip = document.getElementById('sm-stat-vip');
+        const statAisle = document.getElementById('sm-stat-aisle');
+        const validationBox = document.getElementById('sm-validation-box');
+        const btnSave = document.getElementById('sm-btn-save');
+
+        if (statTotal) statTotal.innerText = totalActualSeats;
+        if (statStandard) statStandard.innerText = totalStandard;
+        if (statVip) statVip.innerText = totalVip;
+        if (statAisle) statAisle.innerText = totalAisle;
+
+        if (!validationBox) return;
+
+        if (!currentSmCanEdit) {
+            validationBox.style.background = '#fef2f2';
+            validationBox.style.border = '1px solid #fecaca';
+            validationBox.style.color = '#991b1b';
+            validationBox.innerHTML = `<span>🔒 <strong>Chế độ CHỈ XEM:</strong> Phòng chiếu có suất chiếu đang mở bán, sơ đồ ghế bị khóa không được chỉnh sửa.</span>`;
+            return;
+        }
+
+        // Luồng ngoại lệ 4a: Kiểm tra tính hợp lệ của ma trận
+        if (totalActualSeats === 0) {
+            validationBox.style.background = '#fef2f2';
+            validationBox.style.border = '1px solid #fecaca';
+            validationBox.style.color = '#991b1b';
+            validationBox.innerHTML = `<span>❌ <strong>Sơ đồ trống:</strong> Phòng chiếu phải có ít nhất 1 ghế bán (Thường hoặc VIP).</span>`;
+            if (btnSave) btnSave.disabled = true;
+        } else if (totalAisle === 0) {
+            validationBox.style.background = '#fffbeb';
+            validationBox.style.border = '1px solid #fde68a';
+            validationBox.style.color = '#b45309';
+            validationBox.innerHTML = `<span>⚠️ <strong>Luồng ngoại lệ 4a:</strong> Ma trận chưa có ô lối đi (Aisle)! Bắt buộc có ít nhất 1 lối đi giữa các khối ghế để khán giả di chuyển an toàn.</span>`;
+            if (btnSave) btnSave.disabled = false;
+        } else {
+            validationBox.style.background = '#f0fdf4';
+            validationBox.style.border = '1px solid #bbf7d0';
+            validationBox.style.color = '#15803d';
+            validationBox.innerHTML = `<span>✅ <strong>Ma trận hợp lệ:</strong> Tổng cộng ${totalActualSeats} ghế (${totalStandard} Thường, ${totalVip} VIP) và ${totalAisle} ô lối đi phân luồng CGV.</span>`;
+            if (btnSave) btnSave.disabled = false;
+        }
+    }
+
+    function saveSeatMatrixConfig() {
+        if (!currentSmCanEdit) {
+            alert(currentSmLockReason || 'Phòng chiếu này hiện có suất chiếu đang mở bán nên không thể chỉnh sửa sơ đồ ghế!');
+            return;
+        }
+
+        let totalStandard = 0;
+        let totalVip = 0;
+        let totalAisle = 0;
+
+        for (let r = 0; r < currentSmRows; r++) {
+            for (let c = 0; c < currentSmCols; c++) {
+                const cell = currentSmGrid[r] ? currentSmGrid[r][c] : 'Standard';
+                if (cell === 'Aisle') totalAisle++;
+                else if (cell === 'VIP') totalVip++;
+                else totalStandard++;
+            }
+        }
+
+        // Luồng ngoại lệ 4a: Cảnh báo không có lối đi
+        if (totalAisle === 0) {
+            alert('⚠️ CẢNH BÁO LUỒNG NGOẠI LỆ 4a:\nMa trận ghế không có lối đi! Phòng chiếu phim bắt buộc phải có ít nhất 1 ô lối đi để khách hàng di chuyển vào chỗ ngồi. Vui lòng chọn công cụ "Lối Đi (Trống)" để tạo lối đi trước khi lưu.');
+            return;
+        }
+
+        if (totalStandard + totalVip === 0) {
+            alert('⚠️ SƠ ĐỒ TRỐNG:\nPhòng chiếu phải có ít nhất một ghế ngồi (Thường hoặc VIP)!');
+            return;
+        }
+
+        const btnSave = document.getElementById('sm-btn-save');
+        if (btnSave) {
+            btnSave.disabled = true;
+            btnSave.innerHTML = `<span>⏳</span> <span>Đang lưu...</span>`;
+        }
+
+        const payload = {
+            HallId: currentSmHallId,
+            Rows: currentSmRows,
+            Cols: currentSmCols,
+            Grid: currentSmGrid
+        };
+
+        fetch('/Admin/SaveHallSeatMatrix', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (btnSave) {
+                btnSave.disabled = false;
+                btnSave.innerHTML = `<span>💾</span> <span>Lưu Cấu Hình Sơ Đồ Ghế</span>`;
+            }
+
+            if (data.success) {
+                alert(`✅ ${data.message}\nTổng số ghế phòng chiếu: ${data.totalSeats} ghế (${data.standardCount} Thường, ${data.vipCount} VIP, ${data.aisleCount} ô lối đi).`);
+                closeModal('modal-seat-matrix');
+
+                // Tự động làm mới danh sách phòng chiếu nếu modal quản lý phòng đang mở
+                const qCinemaId = document.getElementById('quick-adjust-cinema-id')?.value;
+                if (qCinemaId && typeof openManageHallsModal === 'function') {
+                    openManageHallsModal(qCinemaId, '');
+                }
+            } else {
+                alert(`❌ Lưu sơ đồ ghế thất bại!\n${data.message}`);
+            }
+        })
+        .catch(err => {
+            if (btnSave) {
+                btnSave.disabled = false;
+                btnSave.innerHTML = `<span>💾</span> <span>Lưu Cấu Hình Sơ Đồ Ghế</span>`;
+            }
+            console.error('Lỗi khi lưu sơ đồ ghế:', err);
+            alert('❌ Có lỗi xảy ra trong quá trình gửi dữ liệu lên máy chủ!');
+        });
+    }
 </script>
 }

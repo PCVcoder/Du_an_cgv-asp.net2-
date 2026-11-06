@@ -236,62 +236,120 @@
 
                     <!-- Seats Grid -->
                     <div style="display: grid; gap: 5px;">
-                        @foreach (var row in new[] { "A", "B", "C", "D", "E" })
+                        @{
+                            Du_an_CGV.Models.ViewModels.SaveSeatMatrixDto? matrixConfig = null;
+                            if (!string.IsNullOrEmpty(showtime?.CinemaHall?.SeatMatrixJson))
+                            {
+                                try
+                                {
+                                    matrixConfig = System.Text.Json.JsonSerializer.Deserialize<Du_an_CGV.Models.ViewModels.SaveSeatMatrixDto>(
+                                        showtime.CinemaHall.SeatMatrixJson,
+                                        new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                                    );
+                                }
+                                catch { }
+                            }
+                        }
+
+                        @if (matrixConfig != null && matrixConfig.Grid != null && matrixConfig.Grid.Count > 0)
                         {
-                            var isVipRow = (row == "C" || row == "D");
-                            <div class="seat-row">
-                                <span style="font-size: 0.65rem; font-weight: 700; text-align: center; @(isVipRow ? "color: #d26b54;" : "")">@row</span>
-                                
-                                <!-- Left block (1-3) -->
-                                <div class="seat-block seat-block-left">
-                                    @for (int num = 1; num <= 3; num++)
-                                    {
-                                        var code = $"{row}{num}";
-                                        var isOcc = occupiedSeats.Contains(code);
-                                        var isHeldOther = heldByOtherSeats.Contains(code);
-                                        var isMyHold = myHeldSeats.Contains(code);
-                                        var seatClass = isOcc ? "occupied" : (isHeldOther ? "held-other" : (isMyHold ? "selected" : (isVipRow ? "vip" : "")));
-                                        var lockType = isOcc ? 1 : (isHeldOther ? 2 : 0);
-                                        var tip = isOcc ? "Ghế đã thanh toán" : (isHeldOther ? "Ghế đang được người khác giữ chỗ trong 5 phút" : (isVipRow ? "Ghế VIP" : "Ghế thường"));
+                            for (int r = 0; r < matrixConfig.Rows; r++)
+                            {
+                                var rowLetter = ((char)('A' + r)).ToString();
+                                int seatNumInRow = 1;
+                                <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 4px;">
+                                    <span style="font-size: 0.65rem; font-weight: 700; width: 18px; text-align: center; color: #777;">@rowLetter</span>
+                                    <div style="display: flex; align-items: center; gap: 3px;">
+                                        @for (int c = 0; c < matrixConfig.Cols; c++)
+                                        {
+                                            var cellType = (matrixConfig.Grid.Count > r && matrixConfig.Grid[r].Count > c)
+                                                ? matrixConfig.Grid[r][c]?.Trim()
+                                                : "Standard";
 
-                                        <div class="seat @seatClass" id="seat-elem-@code" title="@tip" onclick="toggleSeat(this, '@code', @(isVipRow ? 1 : 0), @lockType)">@num</div>
-                                    }
+                                            if (cellType == "Aisle" || cellType == "None")
+                                            {
+                                                <div style="width: 26px; height: 24px; visibility: hidden; pointer-events: none;"></div>
+                                            }
+                                            else
+                                            {
+                                                var isVip = (cellType == "VIP");
+                                                var code = $"{rowLetter}{seatNumInRow}";
+                                                var num = seatNumInRow;
+                                                seatNumInRow++;
+                                                var isOcc = occupiedSeats.Contains(code);
+                                                var isHeldOther = heldByOtherSeats.Contains(code);
+                                                var isMyHold = myHeldSeats.Contains(code);
+                                                var seatClass = isOcc ? "occupied" : (isHeldOther ? "held-other" : (isMyHold ? "selected" : (isVip ? "vip" : "")));
+                                                var lockType = isOcc ? 1 : (isHeldOther ? 2 : 0);
+                                                var tip = isOcc ? "Ghế đã thanh toán" : (isHeldOther ? "Ghế đang được người khác giữ chỗ trong 5 phút" : (isVip ? "Ghế VIP" : "Ghế thường"));
+
+                                                <div class="seat @seatClass" id="seat-elem-@code" title="@tip" onclick="toggleSeat(this, '@code', @(isVip ? 1 : 0), @lockType)">@num</div>
+                                            }
+                                        }
+                                    </div>
+                                    <span style="font-size: 0.65rem; font-weight: 700; width: 18px; text-align: center; color: #777;">@rowLetter</span>
                                 </div>
+                            }
+                        }
+                        else
+                        {
+                            @foreach (var row in new[] { "A", "B", "C", "D", "E" })
+                            {
+                                var isVipRow = (row == "C" || row == "D");
+                                <div class="seat-row">
+                                    <span style="font-size: 0.65rem; font-weight: 700; text-align: center; @(isVipRow ? "color: #d26b54;" : "")">@row</span>
+                                    
+                                    <!-- Left block (1-3) -->
+                                    <div class="seat-block seat-block-left">
+                                        @for (int num = 1; num <= 3; num++)
+                                        {
+                                            var code = $"{row}{num}";
+                                            var isOcc = occupiedSeats.Contains(code);
+                                            var isHeldOther = heldByOtherSeats.Contains(code);
+                                            var isMyHold = myHeldSeats.Contains(code);
+                                            var seatClass = isOcc ? "occupied" : (isHeldOther ? "held-other" : (isMyHold ? "selected" : (isVipRow ? "vip" : "")));
+                                            var lockType = isOcc ? 1 : (isHeldOther ? 2 : 0);
+                                            var tip = isOcc ? "Ghế đã thanh toán" : (isHeldOther ? "Ghế đang được người khác giữ chỗ trong 5 phút" : (isVipRow ? "Ghế VIP" : "Ghế thường"));
 
-                                <!-- Center block (4-15) -->
-                                <div class="seat-block seat-block-center @(isVipRow ? "vip-zone" : "")">
-                                    @for (int num = 4; num <= 15; num++)
-                                    {
-                                        var code = $"{row}{num}";
-                                        var isOcc = occupiedSeats.Contains(code);
-                                        var isHeldOther = heldByOtherSeats.Contains(code);
-                                        var isMyHold = myHeldSeats.Contains(code);
-                                        var seatClass = isOcc ? "occupied" : (isHeldOther ? "held-other" : (isMyHold ? "selected" : (isVipRow ? "vip" : "")));
-                                        var lockType = isOcc ? 1 : (isHeldOther ? 2 : 0);
-                                        var tip = isOcc ? "Ghế đã thanh toán" : (isHeldOther ? "Ghế đang được người khác giữ chỗ trong 5 phút" : (isVipRow ? "Ghế VIP" : "Ghế thường"));
+                                            <div class="seat @seatClass" id="seat-elem-@code" title="@tip" onclick="toggleSeat(this, '@code', @(isVipRow ? 1 : 0), @lockType)">@num</div>
+                                        }
+                                    </div>
 
-                                        <div class="seat @seatClass" id="seat-elem-@code" title="@tip" onclick="toggleSeat(this, '@code', @(isVipRow ? 1 : 0), @lockType)">@num</div>
-                                    }
+                                    <!-- Center block (4-15) -->
+                                    <div class="seat-block seat-block-center @(isVipRow ? "vip-zone" : "")">
+                                        @for (int num = 4; num <= 15; num++)
+                                        {
+                                            var code = $"{row}{num}";
+                                            var isOcc = occupiedSeats.Contains(code);
+                                            var isHeldOther = heldByOtherSeats.Contains(code);
+                                            var isMyHold = myHeldSeats.Contains(code);
+                                            var seatClass = isOcc ? "occupied" : (isHeldOther ? "held-other" : (isMyHold ? "selected" : (isVipRow ? "vip" : "")));
+                                            var lockType = isOcc ? 1 : (isHeldOther ? 2 : 0);
+                                            var tip = isOcc ? "Ghế đã thanh toán" : (isHeldOther ? "Ghế đang được người khác giữ chỗ trong 5 phút" : (isVipRow ? "Ghế VIP" : "Ghế thường"));
+
+                                            <div class="seat @seatClass" id="seat-elem-@code" title="@tip" onclick="toggleSeat(this, '@code', @(isVipRow ? 1 : 0), @lockType)">@num</div>
+                                        }
+                                    </div>
+
+                                    <!-- Right block (16-18) -->
+                                    <div class="seat-block seat-block-right">
+                                        @for (int num = 16; num <= 18; num++)
+                                        {
+                                            var code = $"{row}{num}";
+                                            var isOcc = occupiedSeats.Contains(code);
+                                            var isHeldOther = heldByOtherSeats.Contains(code);
+                                            var isMyHold = myHeldSeats.Contains(code);
+                                            var seatClass = isOcc ? "occupied" : (isHeldOther ? "held-other" : (isMyHold ? "selected" : (isVipRow ? "vip" : "")));
+                                            var lockType = isOcc ? 1 : (isHeldOther ? 2 : 0);
+                                            var tip = isOcc ? "Ghế đã thanh toán" : (isHeldOther ? "Ghế đang được người khác giữ chỗ trong 5 phút" : (isVipRow ? "Ghế VIP" : "Ghế thường"));
+
+                                            <div class="seat @seatClass" id="seat-elem-@code" title="@tip" onclick="toggleSeat(this, '@code', @(isVipRow ? 1 : 0), @lockType)">@num</div>
+                                        }
+                                    </div>
+
+                                    <span style="font-size: 0.65rem; font-weight: 700; text-align: center; @(isVipRow ? "color: #d26b54;" : "")">@row</span>
                                 </div>
-
-                                <!-- Right block (16-18) -->
-                                <div class="seat-block seat-block-right">
-                                    @for (int num = 16; num <= 18; num++)
-                                    {
-                                        var code = $"{row}{num}";
-                                        var isOcc = occupiedSeats.Contains(code);
-                                        var isHeldOther = heldByOtherSeats.Contains(code);
-                                        var isMyHold = myHeldSeats.Contains(code);
-                                        var seatClass = isOcc ? "occupied" : (isHeldOther ? "held-other" : (isMyHold ? "selected" : (isVipRow ? "vip" : "")));
-                                        var lockType = isOcc ? 1 : (isHeldOther ? 2 : 0);
-                                        var tip = isOcc ? "Ghế đã thanh toán" : (isHeldOther ? "Ghế đang được người khác giữ chỗ trong 5 phút" : (isVipRow ? "Ghế VIP" : "Ghế thường"));
-
-                                        <div class="seat @seatClass" id="seat-elem-@code" title="@tip" onclick="toggleSeat(this, '@code', @(isVipRow ? 1 : 0), @lockType)">@num</div>
-                                    }
-                                </div>
-
-                                <span style="font-size: 0.65rem; font-weight: 700; text-align: center; @(isVipRow ? "color: #d26b54;" : "")">@row</span>
-                            </div>
+                            }
                         }
                     </div>
 

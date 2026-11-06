@@ -1563,6 +1563,11 @@ namespace Du_an_CGV.Data
                         ALTER TABLE [CinemaHalls] ADD [IsDeleted] bit NOT NULL DEFAULT 0;
                     END
 
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'CinemaHalls' AND COLUMN_NAME = 'SeatMatrixJson')
+                    BEGIN
+                        ALTER TABLE [CinemaHalls] ADD [SeatMatrixJson] nvarchar(max) NULL;
+                    END
+
                     IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Showtimes' AND COLUMN_NAME = 'IsDeleted')
                     BEGIN
                         ALTER TABLE [Showtimes] ADD [IsDeleted] bit NOT NULL DEFAULT 0;

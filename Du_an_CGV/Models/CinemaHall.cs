@@ -19,6 +19,9 @@ namespace Du_an_CGV.Models
         [Display(Name = "Tổng số ghế")]
         public int TotalSeats { get; set; } = 96;
 
+        [Display(Name = "Cấu hình sơ đồ ghế JSON")]
+        public string? SeatMatrixJson { get; set; }
+
         [Display(Name = "Đã ẩn")]
         public bool IsDeleted { get; set; } = false;
 
