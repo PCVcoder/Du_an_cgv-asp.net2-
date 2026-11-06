@@ -21,36 +21,94 @@ namespace Du_an_CGV.Controllers
         public async Task<IActionResult> Index(string? tab = "dashboard")
         {
             var movies = await _context.Movies
+                .AsNoTracking()
                 .OrderByDescending(m => m.Id)
                 .ToListAsync();
 
             var cinemas = await _context.Cinemas
+                .AsNoTracking()
                 .Include(c => c.CinemaHalls)
                 .OrderBy(c => c.City)
                 .ThenBy(c => c.Name)
                 .ToListAsync();
 
+            var today = DateTime.Today;
             var showtimes = await _context.Showtimes
+                .AsNoTracking()
                 .Include(s => s.Movie)
                 .Include(s => s.CinemaHall)
                     .ThenInclude(h => h!.Cinema)
-                .OrderByDescending(s => s.StartTime)
-                .Take(300)
+                .Where(s => s.StartTime >= today.AddDays(-1))
+                .OrderBy(s => s.StartTime)
+                .Take(500)
                 .ToListAsync();
 
+            if (!showtimes.Any())
+            {
+                showtimes = await _context.Showtimes
+                    .AsNoTracking()
+                    .Include(s => s.Movie)
+                    .Include(s => s.CinemaHall)
+                        .ThenInclude(h => h!.Cinema)
+                    .OrderByDescending(s => s.StartTime)
+                    .Take(300)
+                    .ToListAsync();
+            }
+
+            // Tính toán xung đột lịch chiếu theo từng phòng một cách tối ưu (O(N) thay vì O(N^2))
+            var conflictShowtimeIds = new HashSet<int>();
+            var conflictDetails = new Dictionary<int, string>();
+            var showtimesByHall = showtimes.GroupBy(s => s.CinemaHallId);
+            foreach (var hallGroup in showtimesByHall)
+            {
+                var list = hallGroup.OrderBy(s => s.StartTime).ToList();
+                for (int i = 0; i < list.Count; i++)
+                {
+                    for (int j = i + 1; j < list.Count; j++)
+                    {
+                        if (list[j].StartTime < list[i].EndTime)
+                        {
+                            conflictShowtimeIds.Add(list[i].Id);
+                            conflictShowtimeIds.Add(list[j].Id);
+                            var hallName = list[i].CinemaHall?.Name ?? "phòng";
+                            conflictDetails[list[i].Id] = $"Cùng {hallName} với \"{list[j].Movie?.Title}\" ({list[j].StartTime:HH:mm} - {list[j].EndTime:HH:mm})";
+                            conflictDetails[list[j].Id] = $"Cùng {hallName} với \"{list[i].Movie?.Title}\" ({list[i].StartTime:HH:mm} - {list[i].EndTime:HH:mm})";
+                        }
+                        else
+                        {
+                            break; // Do đã sắp xếp theo StartTime nên các suất sau sẽ bắt đầu muộn hơn nữa
+                        }
+                    }
+                }
+            }
+
             var promos = await _context.NewsOffers
+                .AsNoTracking()
                 .OrderByDescending(p => p.CreatedAt)
                 .ToListAsync();
 
             var inquiries = await _context.ContactInquiries
+                .AsNoTracking()
                 .OrderByDescending(i => i.CreatedAt)
                 .ToListAsync();
 
             var rentals = await _context.HallRentalRequests
+                .AsNoTracking()
+                .Include(r => r.Cinema)
+                    .ThenInclude(c => c!.CinemaHalls)
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
 
+            foreach (var r in rentals)
+            {
+                if (r.Cinema == null && !string.IsNullOrEmpty(r.CinemaName))
+                {
+                    r.Cinema = cinemas.FirstOrDefault(c => c.Name == r.CinemaName);
+                }
+            }
+
             var bookings = await _context.Bookings
+                .AsNoTracking()
                 .Include(b => b.Showtime)
                     .ThenInclude(s => s!.Movie)
                 .Include(b => b.Showtime)
@@ -61,30 +119,32 @@ namespace Du_an_CGV.Controllers
                 .ToListAsync();
 
             var allBookings = await _context.Bookings
+                .AsNoTracking()
                 .Include(b => b.Showtime)
                     .ThenInclude(s => s!.Movie)
                 .Include(b => b.Showtime)
                     .ThenInclude(s => s!.CinemaHall)
                         .ThenInclude(h => h!.Cinema)
-                .Include(b => b.BookingFoodItems)
-                    .ThenInclude(bf => bf.FoodItem)
                 .OrderByDescending(b => b.BookingDate)
-                .Take(500)
+                .Take(150)
                 .ToListAsync();
 
             var actionLogs = await _context.AdminActionLogs
+                .AsNoTracking()
                 .Include(l => l.Cinema)
                 .OrderByDescending(l => l.CreatedAt)
-                .Take(300)
+                .Take(100)
                 .ToListAsync();
 
             var foodItems = await _context.FoodItems
+                .AsNoTracking()
                 .OrderBy(f => f.Category)
                 .ThenBy(f => f.SortOrder)
                 .ThenBy(f => f.Name)
                 .ToListAsync();
 
             var totalRevenue = await _context.Bookings
+                .AsNoTracking()
                 .Where(b => b.Status == "Đã thanh toán")
                 .SumAsync(b => (decimal?)b.TotalAmount) ?? 0;
 
@@ -96,11 +156,13 @@ namespace Du_an_CGV.Controllers
                 .ToList();
 
             var memberTiers = await _context.MemberTiers
+                .AsNoTracking()
                 .OrderBy(t => t.MinPoints)
                 .ToListAsync();
 
             var now = DateTime.Now;
             var activeSeatHolds = await _context.SeatHolds
+                .AsNoTracking()
                 .Include(h => h.Showtime)
                     .ThenInclude(s => s!.Movie)
                 .Include(h => h.Showtime)
@@ -137,7 +199,9 @@ namespace Du_an_CGV.Controllers
                 ActionLogs = actionLogs,
                 Provinces = provinces,
                 MemberTiers = memberTiers,
-                ActiveSeatHolds = activeSeatHolds
+                ActiveSeatHolds = activeSeatHolds,
+                ConflictShowtimeIds = conflictShowtimeIds,
+                ConflictDetails = conflictDetails
             };
 
             ViewBag.ActiveTab = tab ?? "dashboard";
@@ -361,10 +425,28 @@ namespace Du_an_CGV.Controllers
             if (movie != null)
             {
                 var title = movie.Title;
-                _context.Movies.Remove(movie);
+                movie.IsDeleted = true;
+                movie.IsNowShowing = false;
+                movie.IsUpcoming = false;
                 await _context.SaveChangesAsync();
-                await LogActionAsync("Xóa", "Phim", $"Xóa phim \"{title}\" (ID: {id})", id.ToString());
-                TempData["SuccessMessage"] = $"Đã xóa phim \"{title}\"!";
+                await LogActionAsync("Ẩn", "Phim", $"Chuyển phim \"{title}\" (ID: {id}) vào danh sách ẩn", id.ToString());
+                TempData["SuccessMessage"] = $"Đã ẩn phim \"{title}\"! Dữ liệu vẫn được bảo toàn và có thể khôi phục lại bất kỳ lúc nào.";
+            }
+            return RedirectToAction("Index", new { tab = "movies" });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RestoreMovie(int id)
+        {
+            var movie = await _context.Movies.FindAsync(id);
+            if (movie != null)
+            {
+                movie.IsDeleted = false;
+                movie.IsNowShowing = true;
+                await _context.SaveChangesAsync();
+                await LogActionAsync("Khôi phục", "Phim", $"Khôi phục phim \"{movie.Title}\" (ID: {id})", id.ToString());
+                TempData["SuccessMessage"] = $"Đã khôi phục hiển thị phim \"{movie.Title}\"!";
             }
             return RedirectToAction("Index", new { tab = "movies" });
         }
@@ -462,10 +544,25 @@ namespace Du_an_CGV.Controllers
             {
                 var name = cinema.Name;
                 var city = cinema.City;
-                _context.Cinemas.Remove(cinema);
+                cinema.IsDeleted = true;
                 await _context.SaveChangesAsync();
-                await LogActionAsync("Xóa", "Cụm rạp", $"Xóa cụm rạp \"{name}\" ({city})", id.ToString());
-                TempData["SuccessMessage"] = $"Đã xóa rạp \"{name}\"!";
+                await LogActionAsync("Ẩn", "Cụm rạp", $"Ẩn cụm rạp \"{name}\" ({city})", id.ToString());
+                TempData["SuccessMessage"] = $"Đã ẩn rạp \"{name}\"! Toàn bộ dữ liệu được bảo toàn và có thể khôi phục lại.";
+            }
+            return RedirectToAction("Index", new { tab = "cinemas" });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RestoreCinema(int id)
+        {
+            var cinema = await _context.Cinemas.FindAsync(id);
+            if (cinema != null)
+            {
+                cinema.IsDeleted = false;
+                await _context.SaveChangesAsync();
+                await LogActionAsync("Khôi phục", "Cụm rạp", $"Khôi phục cụm rạp \"{cinema.Name}\"", id.ToString());
+                TempData["SuccessMessage"] = $"Đã khôi phục rạp \"{cinema.Name}\"!";
             }
             return RedirectToAction("Index", new { tab = "cinemas" });
         }
@@ -490,6 +587,7 @@ namespace Du_an_CGV.Controllers
                     h.Name,
                     h.HallType,
                     h.TotalSeats,
+                    h.IsDeleted,
                     SeatsCount = h.Seats.Count,
                     ShowtimesCount = h.Showtimes.Count
                 })
@@ -603,9 +701,23 @@ namespace Du_an_CGV.Controllers
             {
                 var cinemaName = hall.Cinema?.Name ?? "CGV";
                 var hallName = hall.Name;
-                _context.CinemaHalls.Remove(hall);
+                hall.IsDeleted = true;
                 await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = $"Đã xóa phòng chiếu \"{hallName}\" của rạp \"{cinemaName}\"!";
+                TempData["SuccessMessage"] = $"Đã ẩn phòng chiếu \"{hallName}\" của rạp \"{cinemaName}\"! Dữ liệu được bảo toàn.";
+            }
+            return RedirectToAction("Index", new { tab = "cinemas" });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RestoreCinemaHall(int id)
+        {
+            var hall = await _context.CinemaHalls.Include(h => h.Cinema).FirstOrDefaultAsync(h => h.Id == id);
+            if (hall != null)
+            {
+                hall.IsDeleted = false;
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = $"Đã khôi phục phòng chiếu \"{hall.Name}\" của rạp \"{hall.Cinema?.Name}\"!";
             }
             return RedirectToAction("Index", new { tab = "cinemas" });
         }
@@ -701,19 +813,61 @@ namespace Du_an_CGV.Controllers
         [HttpGet]
         public async Task<IActionResult> CheckShowtimeConflict(int movieId, int cinemaHallId, DateTime startTime, int excludeShowtimeId = 0)
         {
+            if (startTime == default || startTime.Year < 2000)
+            {
+                return Json(new { hasConflict = true, message = "⚠️ Thời gian bắt đầu chiếu không hợp lệ. Vui lòng chọn đầy đủ ngày và giờ!" });
+            }
+
             var movie = await _context.Movies.FindAsync(movieId);
             if (movie == null)
             {
                 return Json(new { hasConflict = false, message = "Vui lòng chọn phim" });
             }
 
-            var endTime = startTime.AddMinutes(movie.Duration);
+            if (startTime < DateTime.Now.AddMinutes(-10))
+            {
+                return Json(new
+                {
+                    hasConflict = true,
+                    message = $"⚠️ THỜI GIAN TRONG QUÁ KHỨ: Thời gian bắt đầu ({startTime:dd/MM/yyyy HH:mm}) đã qua so với hiện tại ({DateTime.Now:dd/MM/yyyy HH:mm}). Vui lòng chọn khung giờ từ hiện tại trở đi!"
+                });
+            }
+
+            if (movie.EndDate.HasValue && startTime.Date > movie.EndDate.Value.Date)
+            {
+                return Json(new
+                {
+                    hasConflict = true,
+                    message = $"⚠️ VƯỢT QUÁ HẠN CHIẾU: Phim \"{movie.Title}\" chỉ chiếu đến ngày {movie.EndDate.Value:dd/MM/yyyy}!"
+                });
+            }
+
+            if (startTime.Date < movie.ReleaseDate.Date)
+            {
+                return Json(new
+                {
+                    hasConflict = true,
+                    message = $"⚠️ CHƯA KHỞI CHIẾU: Phim \"{movie.Title}\" khởi chiếu từ ngày {movie.ReleaseDate:dd/MM/yyyy}!"
+                });
+            }
+
+            if (startTime.Hour >= 1 && startTime.Hour < 7)
+            {
+                return Json(new
+                {
+                    hasConflict = true,
+                    message = $"⚠️ NGOÀI GIỜ HOẠT ĐỘNG: Khung giờ {startTime:HH:mm} thuộc thời gian rạp nghỉ đêm (01:00 - 07:00). Vui lòng chọn từ 08:00 đến 24:00!"
+                });
+            }
+
+            var duration = movie.Duration > 0 ? movie.Duration : 120;
+            var endTime = startTime.AddMinutes(duration);
 
             var conflicting = await _context.Showtimes
                 .Include(s => s.Movie)
                 .Include(s => s.CinemaHall)
                     .ThenInclude(h => h!.Cinema)
-                .Where(s => s.CinemaHallId == cinemaHallId && (excludeShowtimeId == 0 || s.Id != excludeShowtimeId))
+                .Where(s => s.CinemaHallId == cinemaHallId && (excludeShowtimeId == 0 || s.Id != excludeShowtimeId) && !s.IsDeleted)
                 .Where(s => s.StartTime < endTime && s.EndTime > startTime)
                 .FirstOrDefaultAsync();
 
@@ -728,40 +882,71 @@ namespace Du_an_CGV.Controllers
                 return Json(new
                 {
                     hasConflict = true,
-                    duration = movie.Duration,
+                    duration = duration,
                     endTime = endTime.ToString("HH:mm (dd/MM/yyyy)"),
-                    message = $"⚠️ CẢNH BÁO TRÙNG LỊCH: {hallName} ({cinemaName}) đã có lịch chiếu phim \"{movieTitle}\" từ {startStr} đến {endStr}!"
+                    message = $"⚠️ TRÙNG LỊCH CHIẾU: {hallName} ({cinemaName}) đã có lịch chiếu phim \"{movieTitle}\" từ {startStr} đến {endStr}!"
                 });
             }
 
             return Json(new
             {
                 hasConflict = false,
-                duration = movie.Duration,
+                duration = duration,
                 endTime = endTime.ToString("HH:mm (dd/MM/yyyy)"),
-                message = $"✅ Khung giờ hợp lệ! Kết thúc dự kiến: {endTime:HH:mm (dd/MM/yyyy)} (Thời lượng: {movie.Duration} phút)"
+                message = $"✅ Khung giờ hợp lệ! Kết thúc dự kiến: {endTime:HH:mm (dd/MM/yyyy)} (Thời lượng: {duration} phút)"
             });
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateShowtime(int MovieId, int CinemaHallId, DateTime StartTime, decimal Price, string Format)
+        public async Task<IActionResult> CreateShowtime(int MovieId, int CinemaHallId, DateTime StartTime, decimal Price, string? Format)
         {
-            var movie = await _context.Movies.FindAsync(MovieId);
-            if (movie == null)
+            if (StartTime == default || StartTime.Year < 2000)
             {
-                TempData["ErrorMessage"] = "Không tìm thấy phim được chọn.";
+                TempData["ErrorMessage"] = "⚠️ Thời gian bắt đầu chiếu không hợp lệ. Vui lòng kiểm tra lại ngày và giờ!";
                 return RedirectToAction("Index", new { tab = "showtimes" });
             }
 
-            var endTime = StartTime.AddMinutes(movie.Duration);
+            if (StartTime < DateTime.Now.AddMinutes(-10))
+            {
+                TempData["ErrorMessage"] = $"⚠️ THỜI GIAN KHÔNG HỢP LỆ: Thời gian chiếu ({StartTime:dd/MM/yyyy HH:mm}) đã qua so với thời gian hiện tại ({DateTime.Now:dd/MM/yyyy HH:mm}). Không thể lên lịch suất chiếu ở quá khứ!";
+                return RedirectToAction("Index", new { tab = "showtimes" });
+            }
+
+            var movie = await _context.Movies.FindAsync(MovieId);
+            if (movie == null)
+            {
+                TempData["ErrorMessage"] = "⚠️ Không tìm thấy phim được chọn.";
+                return RedirectToAction("Index", new { tab = "showtimes" });
+            }
+
+            if (movie.EndDate.HasValue && StartTime.Date > movie.EndDate.Value.Date)
+            {
+                TempData["ErrorMessage"] = $"⚠️ THỜI GIAN KHÔNG HỢP LỆ: Phim \"{movie.Title}\" chỉ chiếu đến hết ngày {movie.EndDate.Value:dd/MM/yyyy}. Thời gian bạn chọn ({StartTime:dd/MM/yyyy}) đã vượt quá thời hạn chiếu của phim!";
+                return RedirectToAction("Index", new { tab = "showtimes" });
+            }
+
+            if (StartTime.Date < movie.ReleaseDate.Date)
+            {
+                TempData["ErrorMessage"] = $"⚠️ THỜI GIAN KHÔNG HỢP LỆ: Phim \"{movie.Title}\" khởi chiếu từ ngày {movie.ReleaseDate:dd/MM/yyyy}. Không thể tạo suất chiếu trước ngày khởi chiếu!";
+                return RedirectToAction("Index", new { tab = "showtimes" });
+            }
+
+            if (StartTime.Hour >= 1 && StartTime.Hour < 7)
+            {
+                TempData["ErrorMessage"] = $"⚠️ THỜI GIAN KHÔNG HỢP LỆ: Giờ bắt đầu ({StartTime:HH:mm}) nằm trong khung giờ rạp đóng cửa nghỉ đêm (01:00 - 07:00)! Vui lòng chọn khung giờ từ 08:00 đến 24:00.";
+                return RedirectToAction("Index", new { tab = "showtimes" });
+            }
+
+            var duration = movie.Duration > 0 ? movie.Duration : 120;
+            var endTime = StartTime.AddMinutes(duration);
 
             // Kiểm tra trùng lịch chiếu trong cùng phòng chiếu
             var conflicting = await _context.Showtimes
                 .Include(s => s.Movie)
                 .Include(s => s.CinemaHall)
                     .ThenInclude(h => h!.Cinema)
-                .Where(s => s.CinemaHallId == CinemaHallId)
+                .Where(s => s.CinemaHallId == CinemaHallId && !s.IsDeleted)
                 .Where(s => s.StartTime < endTime && s.EndTime > StartTime)
                 .FirstOrDefaultAsync();
 
@@ -783,12 +968,20 @@ namespace Du_an_CGV.Controllers
                 CinemaHallId = CinemaHallId,
                 StartTime = StartTime,
                 EndTime = endTime,
-                Price = Price,
-                Format = string.IsNullOrWhiteSpace(Format) ? "2D" : Format
+                Price = Price > 0 ? Price : 105000,
+                Format = string.IsNullOrWhiteSpace(Format) ? "2D" : Format.Trim()
             };
 
-            _context.Showtimes.Add(showtime);
-            await _context.SaveChangesAsync();
+            try
+            {
+                _context.Showtimes.Add(showtime);
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"⚠️ Không thể lưu suất chiếu mới: {ex.Message}";
+                return RedirectToAction("Index", new { tab = "showtimes" });
+            }
 
             var hallInfo = await _context.CinemaHalls.Include(h => h.Cinema).FirstOrDefaultAsync(h => h.Id == CinemaHallId);
             await LogActionAsync("Thêm mới", "Suất chiếu", $"Tạo suất chiếu {showtime.Format} phim \"{movie.Title}\" ({StartTime:dd/MM/yyyy HH:mm}) tại {hallInfo?.Cinema?.Name} - {hallInfo?.Name}", showtime.Id.ToString(), hallInfo?.CinemaId);
@@ -799,25 +992,61 @@ namespace Du_an_CGV.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EditShowtime(int Id, int MovieId, int CinemaHallId, DateTime StartTime, decimal Price, string Format)
+        public async Task<IActionResult> EditShowtime(int Id, int MovieId, int CinemaHallId, DateTime StartTime, decimal Price, string? Format)
         {
             var existing = await _context.Showtimes.FindAsync(Id);
             if (existing == null)
             {
-                TempData["ErrorMessage"] = "Không tìm thấy suất chiếu cần sửa.";
+                TempData["ErrorMessage"] = "⚠️ Không tìm thấy suất chiếu cần sửa.";
+                return RedirectToAction("Index", new { tab = "showtimes" });
+            }
+
+            if (StartTime == default || StartTime.Year < 2000)
+            {
+                TempData["ErrorMessage"] = "⚠️ Thời gian bắt đầu chiếu không hợp lệ. Vui lòng kiểm tra lại ngày và giờ!";
+                return RedirectToAction("Index", new { tab = "showtimes" });
+            }
+
+            if (StartTime < DateTime.Now.AddMinutes(-10))
+            {
+                TempData["ErrorMessage"] = $"⚠️ THỜI GIAN KHÔNG HỢP LỆ: Thời gian chiếu ({StartTime:dd/MM/yyyy HH:mm}) đã qua so với thời gian hiện tại ({DateTime.Now:dd/MM/yyyy HH:mm}). Không thể lên lịch suất chiếu ở quá khứ!";
                 return RedirectToAction("Index", new { tab = "showtimes" });
             }
 
             var movie = await _context.Movies.FindAsync(MovieId);
-            var duration = movie?.Duration ?? 120;
+            if (movie == null)
+            {
+                TempData["ErrorMessage"] = "⚠️ Không tìm thấy phim được chọn cho suất chiếu này.";
+                return RedirectToAction("Index", new { tab = "showtimes" });
+            }
+
+            if (movie.EndDate.HasValue && StartTime.Date > movie.EndDate.Value.Date)
+            {
+                TempData["ErrorMessage"] = $"⚠️ THỜI GIAN KHÔNG HỢP LỆ: Phim \"{movie.Title}\" chỉ chiếu đến hết ngày {movie.EndDate.Value:dd/MM/yyyy}. Thời gian bạn chọn ({StartTime:dd/MM/yyyy}) đã vượt quá thời hạn chiếu của phim!";
+                return RedirectToAction("Index", new { tab = "showtimes" });
+            }
+
+            if (StartTime.Date < movie.ReleaseDate.Date)
+            {
+                TempData["ErrorMessage"] = $"⚠️ THỜI GIAN KHÔNG HỢP LỆ: Phim \"{movie.Title}\" khởi chiếu từ ngày {movie.ReleaseDate:dd/MM/yyyy}. Không thể tạo suất chiếu trước ngày khởi chiếu!";
+                return RedirectToAction("Index", new { tab = "showtimes" });
+            }
+
+            if (StartTime.Hour >= 1 && StartTime.Hour < 7)
+            {
+                TempData["ErrorMessage"] = $"⚠️ THỜI GIAN KHÔNG HỢP LỆ: Giờ bắt đầu ({StartTime:HH:mm}) nằm trong khung giờ rạp đóng cửa nghỉ đêm (01:00 - 07:00)! Vui lòng chọn khung giờ từ 08:00 đến 24:00.";
+                return RedirectToAction("Index", new { tab = "showtimes" });
+            }
+
+            var duration = movie.Duration > 0 ? movie.Duration : 120;
             var endTime = StartTime.AddMinutes(duration);
 
-            // Kiểm tra trùng lịch chiếu trong cùng phòng chiếu (loại trừ chính suất đang sửa)
+            // Kiểm tra trùng lịch chiếu trong cùng phòng chiếu (loại trừ chính suất đang sửa và suất đã ẩn)
             var conflicting = await _context.Showtimes
                 .Include(s => s.Movie)
                 .Include(s => s.CinemaHall)
                     .ThenInclude(h => h!.Cinema)
-                .Where(s => s.CinemaHallId == CinemaHallId && s.Id != Id)
+                .Where(s => s.CinemaHallId == CinemaHallId && s.Id != Id && !s.IsDeleted)
                 .Where(s => s.StartTime < endTime && s.EndTime > StartTime)
                 .FirstOrDefaultAsync();
 
@@ -833,14 +1062,27 @@ namespace Du_an_CGV.Controllers
                 return RedirectToAction("Index", new { tab = "showtimes" });
             }
 
+            // Đảm bảo Format không bao giờ bị null
+            string finalFormat = !string.IsNullOrWhiteSpace(Format) 
+                ? Format.Trim() 
+                : (!string.IsNullOrWhiteSpace(existing.Format) ? existing.Format : "2D");
+
             existing.MovieId = MovieId;
             existing.CinemaHallId = CinemaHallId;
             existing.StartTime = StartTime;
             existing.EndTime = endTime;
-            existing.Price = Price;
-            existing.Format = Format;
+            existing.Price = Price > 0 ? Price : (existing.Price > 0 ? existing.Price : 105000);
+            existing.Format = finalFormat;
 
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"⚠️ Không thể cập nhật suất chiếu: {ex.Message}";
+                return RedirectToAction("Index", new { tab = "showtimes" });
+            }
 
             var hallEditInfo = await _context.CinemaHalls.Include(h => h.Cinema).FirstOrDefaultAsync(h => h.Id == CinemaHallId);
             await LogActionAsync("Cập nhật", "Suất chiếu", $"Cập nhật suất chiếu #{Id} ({StartTime:dd/MM/yyyy HH:mm}) tại {hallEditInfo?.Cinema?.Name} - {hallEditInfo?.Name}", Id.ToString(), hallEditInfo?.CinemaId);
@@ -863,10 +1105,25 @@ namespace Du_an_CGV.Controllers
                 var cinemaName = showtime.CinemaHall?.Cinema?.Name;
                 var cinemaId = showtime.CinemaHall?.CinemaId;
 
-                _context.Showtimes.Remove(showtime);
+                showtime.IsDeleted = true;
                 await _context.SaveChangesAsync();
-                await LogActionAsync("Xóa", "Suất chiếu", $"Xóa suất chiếu #{id} ({showtime.StartTime:dd/MM/yyyy HH:mm}) tại {cinemaName} - {hallName}", id.ToString(), cinemaId);
-                TempData["SuccessMessage"] = "Đã xóa suất chiếu!";
+                await LogActionAsync("Ẩn", "Suất chiếu", $"Ẩn suất chiếu #{id} ({showtime.StartTime:dd/MM/yyyy HH:mm}) tại {cinemaName} - {hallName}", id.ToString(), cinemaId);
+                TempData["SuccessMessage"] = "Đã ẩn suất chiếu! Suất chiếu không xuất hiện với khách hàng nhưng lịch sử vẫn được bảo toàn.";
+            }
+            return RedirectToAction("Index", new { tab = "showtimes" });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RestoreShowtime(int id)
+        {
+            var showtime = await _context.Showtimes.FindAsync(id);
+            if (showtime != null)
+            {
+                showtime.IsDeleted = false;
+                await _context.SaveChangesAsync();
+                await LogActionAsync("Khôi phục", "Suất chiếu", $"Khôi phục suất chiếu #{id}", id.ToString());
+                TempData["SuccessMessage"] = "Đã khôi phục hiển thị suất chiếu!";
             }
             return RedirectToAction("Index", new { tab = "showtimes" });
         }
@@ -957,9 +1214,25 @@ namespace Du_an_CGV.Controllers
             var promo = await _context.NewsOffers.FindAsync(id);
             if (promo != null)
             {
-                _context.NewsOffers.Remove(promo);
+                promo.IsDeleted = true;
+                promo.IsActive = false;
                 await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = "Đã xóa ưu đãi!";
+                TempData["SuccessMessage"] = "Đã ẩn ưu đãi / tin tức (không xóa vĩnh viễn)!";
+            }
+            return RedirectToAction("Index", new { tab = "promos" });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RestorePromo(int id)
+        {
+            var promo = await _context.NewsOffers.FindAsync(id);
+            if (promo != null)
+            {
+                promo.IsDeleted = false;
+                promo.IsActive = true;
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = "Đã khôi phục hiển thị ưu đãi / tin tức!";
             }
             return RedirectToAction("Index", new { tab = "promos" });
         }
@@ -995,10 +1268,27 @@ namespace Du_an_CGV.Controllers
             if (inquiry != null)
             {
                 var name = inquiry.FullName;
-                _context.ContactInquiries.Remove(inquiry);
+                inquiry.IsDeleted = true;
+                inquiry.Status = "Đã ẩn";
                 await _context.SaveChangesAsync();
-                await LogActionAsync("Xóa", "Tiếp nhận TT", $"Xóa thư liên hệ của {name} (ID: {id})", id.ToString());
-                TempData["SuccessMessage"] = "Đã xóa thư liên hệ!";
+                await LogActionAsync("Ẩn", "Tiếp nhận TT", $"Ẩn thư liên hệ của {name} (ID: {id})", id.ToString());
+                TempData["SuccessMessage"] = "Đã ẩn thư liên hệ (không xóa vĩnh viễn)!";
+            }
+            return RedirectToAction("Index", new { tab = "inquiries" });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RestoreInquiry(int id)
+        {
+            var inquiry = await _context.ContactInquiries.FindAsync(id);
+            if (inquiry != null)
+            {
+                inquiry.IsDeleted = false;
+                inquiry.Status = "Chưa đọc";
+                await _context.SaveChangesAsync();
+                await LogActionAsync("Khôi phục", "Tiếp nhận TT", $"Khôi phục thư liên hệ của {inquiry.FullName} (ID: {id})", id.ToString());
+                TempData["SuccessMessage"] = "Đã khôi phục hiển thị thư liên hệ!";
             }
             return RedirectToAction("Index", new { tab = "inquiries" });
         }
@@ -1020,6 +1310,24 @@ namespace Du_an_CGV.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateRentalDetails(int id, string status, string? adminNotes, decimal? estimatedBudget)
+        {
+            var rental = await _context.HallRentalRequests.Include(r => r.Cinema).FirstOrDefaultAsync(r => r.Id == id);
+            if (rental != null)
+            {
+                rental.Status = status;
+                rental.AdminNotes = adminNotes;
+                rental.EstimatedBudget = estimatedBudget;
+                await _context.SaveChangesAsync();
+                var budgetStr = estimatedBudget.HasValue ? $"{estimatedBudget.Value:N0}đ" : "Chưa nhập";
+                await LogActionAsync("Xử lý chi tiết", "Thuê rạp & Sự kiện", $"Cập nhật tiến độ & báo giá đơn của {rental.FullName}: Trạng thái \"{status}\", Dự toán: {budgetStr}", id.ToString(), rental.CinemaId);
+                TempData["SuccessMessage"] = $"Đã lưu tiến độ xử lý và dự toán chi phí cho khách {rental.FullName}!";
+            }
+            return RedirectToAction("Index", new { tab = "rentals" });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteRental(int id)
         {
             var rental = await _context.HallRentalRequests.FindAsync(id);
@@ -1027,10 +1335,27 @@ namespace Du_an_CGV.Controllers
             {
                 var name = rental.FullName;
                 var cinemaId = rental.CinemaId;
-                _context.HallRentalRequests.Remove(rental);
+                rental.IsDeleted = true;
+                rental.Status = "Đã hủy (Ẩn)";
                 await _context.SaveChangesAsync();
-                await LogActionAsync("Xóa", "Thuê rạp & Sự kiện", $"Xóa yêu cầu thuê rạp của {name} (ID: {id})", id.ToString(), cinemaId);
-                TempData["SuccessMessage"] = "Đã xóa yêu cầu thuê rạp!";
+                await LogActionAsync("Ẩn", "Thuê rạp & Sự kiện", $"Ẩn yêu cầu thuê rạp của {name} (ID: {id})", id.ToString(), cinemaId);
+                TempData["SuccessMessage"] = "Đã ẩn yêu cầu thuê rạp (không xóa vĩnh viễn)!";
+            }
+            return RedirectToAction("Index", new { tab = "rentals" });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RestoreRental(int id)
+        {
+            var rental = await _context.HallRentalRequests.FindAsync(id);
+            if (rental != null)
+            {
+                rental.IsDeleted = false;
+                rental.Status = "Mới tiếp nhận";
+                await _context.SaveChangesAsync();
+                await LogActionAsync("Khôi phục", "Thuê rạp & Sự kiện", $"Khôi phục yêu cầu thuê rạp của {rental.FullName} (ID: {id})", id.ToString(), rental.CinemaId);
+                TempData["SuccessMessage"] = "Đã khôi phục hiển thị yêu cầu thuê rạp!";
             }
             return RedirectToAction("Index", new { tab = "rentals" });
         }
@@ -1079,11 +1404,28 @@ namespace Du_an_CGV.Controllers
             {
                 var code = booking.BookingCode;
                 int? cinemaId = booking.Showtime?.CinemaHall?.CinemaId;
-                _context.Bookings.Remove(booking);
+                booking.IsDeleted = true;
+                booking.Status = "Đã hủy (Ẩn)";
                 await _context.SaveChangesAsync();
 
-                await LogActionAsync("Xóa", "Đơn vé & Giao dịch", $"Xóa đơn đặt vé #{code} (Khách: {booking.CustomerName}, Tiền: {booking.TotalAmount:N0}đ)", code, cinemaId);
-                TempData["SuccessMessage"] = $"Đã xóa đơn đặt vé #{code}!";
+                await LogActionAsync("Ẩn", "Đơn vé & Giao dịch", $"Ẩn đơn đặt vé #{code} (Khách: {booking.CustomerName}, Tiền: {booking.TotalAmount:N0}đ)", code, cinemaId);
+                TempData["SuccessMessage"] = $"Đã chuyển đơn đặt vé #{code} sang trạng thái Đã hủy (Ẩn)! Lịch sử thanh toán được bảo toàn.";
+            }
+            return RedirectToAction("Index", new { tab = string.IsNullOrWhiteSpace(returnTab) ? "bookings" : returnTab });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RestoreBooking(int id, string? returnTab = "bookings")
+        {
+            var booking = await _context.Bookings.FindAsync(id);
+            if (booking != null)
+            {
+                booking.IsDeleted = false;
+                booking.Status = "Đã thanh toán";
+                await _context.SaveChangesAsync();
+                await LogActionAsync("Khôi phục", "Đơn vé & Giao dịch", $"Khôi phục đơn vé #{booking.BookingCode}", booking.BookingCode);
+                TempData["SuccessMessage"] = $"Đã khôi phục hiển thị đơn đặt vé #{booking.BookingCode}!";
             }
             return RedirectToAction("Index", new { tab = string.IsNullOrWhiteSpace(returnTab) ? "bookings" : returnTab });
         }
@@ -1156,10 +1498,27 @@ namespace Du_an_CGV.Controllers
             if (item != null)
             {
                 var name = item.Name;
-                _context.FoodItems.Remove(item);
+                item.IsDeleted = true;
+                item.IsAvailable = false;
                 await _context.SaveChangesAsync();
-                await LogActionAsync("Xóa", "Bắp nước & F&B", $"Xóa món \"{name}\" khỏi menu F&B", id.ToString());
-                TempData["SuccessMessage"] = $"Đã xóa món \"{name}\" khỏi menu F&B!";
+                await LogActionAsync("Ẩn", "Bắp nước & F&B", $"Ẩn món \"{name}\" khỏi menu F&B", id.ToString());
+                TempData["SuccessMessage"] = $"Đã ẩn món \"{name}\" khỏi menu! Dữ liệu được bảo toàn.";
+            }
+            return RedirectToAction("Index", new { tab = "food" });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RestoreFoodItem(int id)
+        {
+            var item = await _context.FoodItems.FindAsync(id);
+            if (item != null)
+            {
+                item.IsDeleted = false;
+                item.IsAvailable = true;
+                await _context.SaveChangesAsync();
+                await LogActionAsync("Khôi phục", "Bắp nước & F&B", $"Khôi phục món \"{item.Name}\" vào menu", id.ToString());
+                TempData["SuccessMessage"] = $"Đã khôi phục món \"{item.Name}\" vào menu bán hàng!";
             }
             return RedirectToAction("Index", new { tab = "food" });
         }
@@ -1177,6 +1536,361 @@ namespace Du_an_CGV.Controllers
                 TempData["SuccessMessage"] = $"Đã đổi trạng thái món \"{item.Name}\" thành {(item.IsAvailable ? "Đang kinh doanh" : "Tạm ngưng")}!";
             }
             return RedirectToAction("Index", new { tab = "food" });
+        }
+
+        #endregion
+
+        #region BÁO CÁO & THỐNG KÊ DOANH THU
+
+        [HttpGet]
+        public IActionResult Reports()
+        {
+            return RedirectToAction("Index", new { tab = "reports" });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetRevenueReportData(DateTime? fromDate, DateTime? toDate, int? cinemaId, int? movieId)
+        {
+            var today = DateTime.Today;
+            var start = fromDate?.Date ?? today.AddDays(-29);
+            var end = (toDate?.Date ?? today).AddDays(1).AddTicks(-1);
+
+            var query = _context.Bookings
+                .AsNoTracking()
+                .Include(b => b.Showtime)
+                    .ThenInclude(s => s!.Movie)
+                .Include(b => b.Showtime)
+                    .ThenInclude(s => s!.CinemaHall)
+                        .ThenInclude(h => h!.Cinema)
+                .Include(b => b.BookingFoodItems)
+                    .ThenInclude(bf => bf.FoodItem)
+                .Where(b => b.Status == "Đã thanh toán" && !b.IsDeleted && b.BookingDate >= start && b.BookingDate <= end);
+
+            if (cinemaId.HasValue && cinemaId.Value > 0)
+            {
+                query = query.Where(b => b.Showtime != null && b.Showtime.CinemaHall != null && b.Showtime.CinemaHall.CinemaId == cinemaId.Value);
+            }
+
+            if (movieId.HasValue && movieId.Value > 0)
+            {
+                query = query.Where(b => b.Showtime != null && b.Showtime.MovieId == movieId.Value);
+            }
+
+            var bookings = await query.OrderByDescending(b => b.BookingDate).ToListAsync();
+
+            // 3a. Luồng ngoại lệ: Không có dữ liệu trong khoảng thời gian chọn
+            if (!bookings.Any())
+            {
+                return Json(new
+                {
+                    hasData = false,
+                    message = "Không có dữ liệu giao dịch đã thanh toán trong khoảng thời gian đã chọn.",
+                    fromDate = start.ToString("yyyy-MM-dd"),
+                    toDate = (toDate?.Date ?? today).ToString("yyyy-MM-dd"),
+                    summary = new
+                    {
+                        totalRevenue = 0,
+                        totalTicketRevenue = 0,
+                        totalFoodRevenue = 0,
+                        totalTicketsSold = 0,
+                        totalOrders = 0,
+                        occupancyRate = 0,
+                        avgOrderValue = 0
+                    },
+                    timeline = new List<object>(),
+                    byMovie = new List<object>(),
+                    byCinema = new List<object>(),
+                    byPayment = new List<object>(),
+                    details = new List<object>()
+                });
+            }
+
+            // 1. Tính toán tóm tắt tổng thể
+            decimal totalRevenue = bookings.Sum(b => b.TotalAmount);
+            decimal totalFoodRevenue = bookings.Sum(b => b.BookingFoodItems?.Sum(f => (decimal)f.Quantity * f.UnitPrice) ?? 0);
+            decimal totalTicketRevenue = bookings.Sum(b => {
+                var food = b.BookingFoodItems?.Sum(f => (decimal)f.Quantity * f.UnitPrice) ?? 0;
+                return b.TotalAmount > food ? b.TotalAmount - food : b.TotalAmount;
+            });
+            int totalTicketsSold = bookings.Sum(b => !string.IsNullOrWhiteSpace(b.SeatsList) 
+                ? b.SeatsList.Split(',', StringSplitOptions.RemoveEmptyEntries).Length 
+                : 1);
+            int totalOrders = bookings.Count;
+            decimal avgOrderValue = totalOrders > 0 ? Math.Round(totalRevenue / totalOrders, 0) : 0;
+
+            // 2. Tính Tỷ lệ lấp đầy ghế (Occupancy Rate)
+            var showtimeQuery = _context.Showtimes
+                .AsNoTracking()
+                .Include(s => s.CinemaHall)
+                .Where(s => !s.IsDeleted && s.StartTime >= start && s.StartTime <= end);
+
+            if (cinemaId.HasValue && cinemaId.Value > 0)
+            {
+                showtimeQuery = showtimeQuery.Where(s => s.CinemaHall != null && s.CinemaHall.CinemaId == cinemaId.Value);
+            }
+            if (movieId.HasValue && movieId.Value > 0)
+            {
+                showtimeQuery = showtimeQuery.Where(s => s.MovieId == movieId.Value);
+            }
+
+            var matchingShowtimes = await showtimeQuery.ToListAsync();
+            int totalCapacity = matchingShowtimes.Sum(s => s.CinemaHall?.TotalSeats > 0 ? s.CinemaHall.TotalSeats : 96);
+            
+            decimal occupancyRate = 0;
+            if (totalCapacity > 0)
+            {
+                occupancyRate = Math.Round((decimal)totalTicketsSold / totalCapacity * 100, 1);
+                if (occupancyRate > 100) occupancyRate = 100;
+            }
+            else if (totalTicketsSold > 0)
+            {
+                var bookedShowtimeIds = bookings.Select(b => b.ShowtimeId).Distinct().ToList();
+                var bookedHalls = await _context.Showtimes
+                    .AsNoTracking()
+                    .Include(s => s.CinemaHall)
+                    .Where(s => bookedShowtimeIds.Contains(s.Id))
+                    .ToListAsync();
+                int bookedCapacity = bookedHalls.Sum(s => s.CinemaHall?.TotalSeats > 0 ? s.CinemaHall.TotalSeats : 96);
+                if (bookedCapacity > 0)
+                {
+                    occupancyRate = Math.Round((decimal)totalTicketsSold / bookedCapacity * 100, 1);
+                    if (occupancyRate > 100) occupancyRate = 100;
+                }
+            }
+
+            // 3. Chuỗi thời gian (Timeline) theo ngày cho biểu đồ
+            var timeline = bookings
+                .GroupBy(b => b.BookingDate.ToString("dd/MM/yyyy"))
+                .Select(g => new
+                {
+                    date = g.Key,
+                    dateRaw = g.First().BookingDate.Date,
+                    totalRevenue = g.Sum(b => b.TotalAmount),
+                    foodRevenue = g.Sum(b => b.BookingFoodItems?.Sum(f => (decimal)f.Quantity * f.UnitPrice) ?? 0),
+                    ticketRevenue = g.Sum(b => {
+                        var food = b.BookingFoodItems?.Sum(f => (decimal)f.Quantity * f.UnitPrice) ?? 0;
+                        return b.TotalAmount > food ? b.TotalAmount - food : b.TotalAmount;
+                    }),
+                    ticketsSold = g.Sum(b => !string.IsNullOrWhiteSpace(b.SeatsList) ? b.SeatsList.Split(',', StringSplitOptions.RemoveEmptyEntries).Length : 1),
+                    ordersCount = g.Count()
+                })
+                .OrderBy(x => x.dateRaw)
+                .Select(x => new
+                {
+                    x.date,
+                    x.totalRevenue,
+                    x.foodRevenue,
+                    x.ticketRevenue,
+                    x.ticketsSold,
+                    x.ordersCount
+                })
+                .ToList();
+
+            // 4. Doanh thu theo Phim (By Movie)
+            var byMovie = bookings
+                .GroupBy(b => b.Showtime?.MovieId ?? 0)
+                .Select(g => {
+                    var first = g.First();
+                    var movieTitle = first.Showtime?.Movie?.Title ?? "Phim khác";
+                    var posterUrl = first.Showtime?.Movie?.PosterUrl ?? "";
+                    var genre = first.Showtime?.Movie?.Genre ?? "";
+                    var rev = g.Sum(b => b.TotalAmount);
+                    var foodRev = g.Sum(b => b.BookingFoodItems?.Sum(f => (decimal)f.Quantity * f.UnitPrice) ?? 0);
+                    var ticketRev = g.Sum(b => {
+                        var f = b.BookingFoodItems?.Sum(x => (decimal)x.Quantity * x.UnitPrice) ?? 0;
+                        return b.TotalAmount > f ? b.TotalAmount - f : b.TotalAmount;
+                    });
+                    var tix = g.Sum(b => !string.IsNullOrWhiteSpace(b.SeatsList) ? b.SeatsList.Split(',', StringSplitOptions.RemoveEmptyEntries).Length : 1);
+                    var share = totalRevenue > 0 ? Math.Round(rev / totalRevenue * 100, 1) : 0;
+                    return new
+                    {
+                        movieId = g.Key,
+                        movieTitle,
+                        posterUrl,
+                        genre,
+                        totalRevenue = rev,
+                        ticketRevenue = ticketRev,
+                        foodRevenue = foodRev,
+                        ticketsSold = tix,
+                        ordersCount = g.Count(),
+                        percentage = share
+                    };
+                })
+                .OrderByDescending(m => m.totalRevenue)
+                .ToList();
+
+            // 5. Doanh thu theo Cụm Rạp (By Cinema)
+            var byCinema = bookings
+                .GroupBy(b => b.Showtime?.CinemaHall?.CinemaId ?? 0)
+                .Select(g => {
+                    var first = g.First();
+                    var cinemaName = first.Showtime?.CinemaHall?.Cinema?.Name ?? "CGV";
+                    var city = first.Showtime?.CinemaHall?.Cinema?.City ?? "";
+                    var rev = g.Sum(b => b.TotalAmount);
+                    var foodRev = g.Sum(b => b.BookingFoodItems?.Sum(f => (decimal)f.Quantity * f.UnitPrice) ?? 0);
+                    var ticketRev = g.Sum(b => {
+                        var f = b.BookingFoodItems?.Sum(x => (decimal)x.Quantity * x.UnitPrice) ?? 0;
+                        return b.TotalAmount > f ? b.TotalAmount - f : b.TotalAmount;
+                    });
+                    var tix = g.Sum(b => !string.IsNullOrWhiteSpace(b.SeatsList) ? b.SeatsList.Split(',', StringSplitOptions.RemoveEmptyEntries).Length : 1);
+                    var share = totalRevenue > 0 ? Math.Round(rev / totalRevenue * 100, 1) : 0;
+                    return new
+                    {
+                        cinemaId = g.Key,
+                        cinemaName,
+                        city,
+                        totalRevenue = rev,
+                        ticketRevenue = ticketRev,
+                        foodRevenue = foodRev,
+                        ticketsSold = tix,
+                        ordersCount = g.Count(),
+                        percentage = share
+                    };
+                })
+                .OrderByDescending(c => c.totalRevenue)
+                .ToList();
+
+            // 6. Doanh thu theo Cổng thanh toán (By Payment Method)
+            var byPayment = bookings
+                .GroupBy(b => string.IsNullOrWhiteSpace(b.PaymentMethod) ? "Khác" : b.PaymentMethod)
+                .Select(g => new
+                {
+                    method = g.Key,
+                    totalRevenue = g.Sum(b => b.TotalAmount),
+                    ordersCount = g.Count(),
+                    percentage = totalRevenue > 0 ? Math.Round(g.Sum(b => b.TotalAmount) / totalRevenue * 100, 1) : 0
+                })
+                .OrderByDescending(p => p.totalRevenue)
+                .ToList();
+
+            // 7. Chi tiết từng giao dịch đã thanh toán
+            var details = bookings.Take(200).Select(b => {
+                var food = b.BookingFoodItems?.Sum(f => (decimal)f.Quantity * f.UnitPrice) ?? 0;
+                var ticket = b.TotalAmount > food ? b.TotalAmount - food : b.TotalAmount;
+                var seatCount = !string.IsNullOrWhiteSpace(b.SeatsList) ? b.SeatsList.Split(',', StringSplitOptions.RemoveEmptyEntries).Length : 1;
+                var foodDesc = b.BookingFoodItems != null && b.BookingFoodItems.Any()
+                    ? string.Join(", ", b.BookingFoodItems.Select(f => $"{f.FoodItem?.Name ?? "F&B"} x{f.Quantity}"))
+                    : "—";
+
+                return new
+                {
+                    id = b.Id,
+                    bookingCode = b.BookingCode,
+                    bookingDate = b.BookingDate.ToString("dd/MM/yyyy HH:mm"),
+                    customerName = b.CustomerName,
+                    customerPhone = b.CustomerPhone,
+                    customerEmail = b.CustomerEmail,
+                    movieTitle = b.Showtime?.Movie?.Title ?? "—",
+                    cinemaName = b.Showtime?.CinemaHall?.Cinema?.Name ?? "—",
+                    hallName = b.Showtime?.CinemaHall?.Name ?? "—",
+                    seatsList = b.SeatsList,
+                    ticketsCount = seatCount,
+                    ticketAmount = ticket,
+                    foodAmount = food,
+                    totalAmount = b.TotalAmount,
+                    paymentMethod = b.PaymentMethod,
+                    status = b.Status,
+                    foodDesc = foodDesc
+                };
+            }).ToList();
+
+            return Json(new
+            {
+                hasData = true,
+                message = "Tải báo cáo thành công.",
+                fromDate = start.ToString("yyyy-MM-dd"),
+                toDate = (toDate?.Date ?? today).ToString("yyyy-MM-dd"),
+                summary = new
+                {
+                    totalRevenue,
+                    totalTicketRevenue,
+                    totalFoodRevenue,
+                    totalTicketsSold,
+                    totalOrders,
+                    occupancyRate,
+                    avgOrderValue
+                },
+                timeline,
+                byMovie,
+                byCinema,
+                byPayment,
+                details
+            });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ExportRevenueReport(DateTime? fromDate, DateTime? toDate, int? cinemaId, int? movieId)
+        {
+            var today = DateTime.Today;
+            var start = fromDate?.Date ?? today.AddDays(-29);
+            var end = (toDate?.Date ?? today).AddDays(1).AddTicks(-1);
+
+            var query = _context.Bookings
+                .AsNoTracking()
+                .Include(b => b.Showtime)
+                    .ThenInclude(s => s!.Movie)
+                .Include(b => b.Showtime)
+                    .ThenInclude(s => s!.CinemaHall)
+                        .ThenInclude(h => h!.Cinema)
+                .Include(b => b.BookingFoodItems)
+                    .ThenInclude(bf => bf.FoodItem)
+                .Where(b => b.Status == "Đã thanh toán" && !b.IsDeleted && b.BookingDate >= start && b.BookingDate <= end);
+
+            if (cinemaId.HasValue && cinemaId.Value > 0)
+            {
+                query = query.Where(b => b.Showtime != null && b.Showtime.CinemaHall != null && b.Showtime.CinemaHall.CinemaId == cinemaId.Value);
+            }
+            if (movieId.HasValue && movieId.Value > 0)
+            {
+                query = query.Where(b => b.Showtime != null && b.Showtime.MovieId == movieId.Value);
+            }
+
+            var bookings = await query.OrderByDescending(b => b.BookingDate).ToListAsync();
+
+            var sb = new System.Text.StringBuilder();
+            sb.Append('\uFEFF'); // UTF-8 BOM để Excel hiển thị đúng tiếng Việt
+
+            sb.AppendLine("BÁO CÁO DOANH THU & BÁN VÉ CGV CINEMAS");
+            sb.AppendLine($"Khoảng thời gian:;{start:dd/MM/yyyy} - {(toDate?.Date ?? today):dd/MM/yyyy}");
+            sb.AppendLine($"Thời điểm xuất báo cáo:;{DateTime.Now:dd/MM/yyyy HH:mm:ss}");
+            sb.AppendLine($"Người xuất báo cáo:;{User.Identity?.Name ?? "Quản trị viên"}");
+            sb.AppendLine();
+
+            decimal totalRev = bookings.Sum(b => b.TotalAmount);
+            decimal totalFood = bookings.Sum(b => b.BookingFoodItems?.Sum(f => (decimal)f.Quantity * f.UnitPrice) ?? 0);
+            decimal totalTicket = totalRev - totalFood;
+            int totalTix = bookings.Sum(b => !string.IsNullOrWhiteSpace(b.SeatsList) ? b.SeatsList.Split(',', StringSplitOptions.RemoveEmptyEntries).Length : 1);
+
+            sb.AppendLine("TỔNG HỢP CHỈ SỐ DOANH THU:");
+            sb.AppendLine($"Tổng Doanh Thu (VNĐ):;{totalRev:N0}");
+            sb.AppendLine($"Doanh Thu Bán Vé (VNĐ):;{totalTicket:N0}");
+            sb.AppendLine($"Doanh Thu Bắp Nước F&B (VNĐ):;{totalFood:N0}");
+            sb.AppendLine($"Tổng Số Vé Bán Ra:;{totalTix}");
+            sb.AppendLine($"Tổng Số Đơn Đặt Vé:;{bookings.Count}");
+            sb.AppendLine();
+
+            sb.AppendLine("DANH SÁCH CHI TIẾT CÁC ĐƠN ĐẶT VÉ ĐÃ THANH TOÁN:");
+            sb.AppendLine("STT;Mã Đơn;Thời Gian;Khách Hàng;Số Điện Thoại;Phim;Cụm Rạp;Phòng Chiếu;Danh Sách Ghế;Số Vé;Tiền Vé (VNĐ);Tiền Bắp Nước (VNĐ);Tổng Tiền (VNĐ);Hình Thức TT;Trạng Thái");
+
+            int idx = 1;
+            foreach (var b in bookings)
+            {
+                var food = b.BookingFoodItems?.Sum(f => (decimal)f.Quantity * f.UnitPrice) ?? 0;
+                var ticket = b.TotalAmount > food ? b.TotalAmount - food : b.TotalAmount;
+                var tix = !string.IsNullOrWhiteSpace(b.SeatsList) ? b.SeatsList.Split(',', StringSplitOptions.RemoveEmptyEntries).Length : 1;
+                var movie = (b.Showtime?.Movie?.Title ?? "").Replace(";", ",");
+                var cinema = (b.Showtime?.CinemaHall?.Cinema?.Name ?? "").Replace(";", ",");
+                var hall = (b.Showtime?.CinemaHall?.Name ?? "").Replace(";", ",");
+                var cust = (b.CustomerName ?? "").Replace(";", ",");
+                var seats = (b.SeatsList ?? "").Replace(";", ",");
+
+                sb.AppendLine($"{idx};{b.BookingCode};{b.BookingDate:dd/MM/yyyy HH:mm};{cust};'{b.CustomerPhone};{movie};{cinema};{hall};{seats};{tix};{ticket:0};{food:0};{b.TotalAmount:0};{b.PaymentMethod};{b.Status}");
+                idx++;
+            }
+
+            var bytes = System.Text.Encoding.UTF8.GetBytes(sb.ToString());
+            var fileName = $"BaoCaoDoanhThu_CGV_{start:yyyyMMdd}_{(toDate?.Date ?? today):yyyyMMdd}.csv";
+            return File(bytes, "text/csv; charset=utf-8", fileName);
         }
 
         #endregion

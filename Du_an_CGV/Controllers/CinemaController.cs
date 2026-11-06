@@ -27,7 +27,8 @@ namespace Du_an_CGV.Controllers
         public async Task<IActionResult> Index(string? city = "Hồ Chí Minh")
         {
             var cinemas = await _context.Cinemas
-                .Include(c => c.CinemaHalls)
+                .Where(c => !c.IsDeleted)
+                .Include(c => c.CinemaHalls.Where(h => !h.IsDeleted))
                 .ToListAsync();
 
             // Collect any distinct cities from DB that might have been typed by the user
@@ -74,21 +75,23 @@ namespace Du_an_CGV.Controllers
                 if (cinema == null) return NotFound();
             }
 
+            var now = DateTime.Now;
+            var today = DateTime.Today;
             var showtimes = await _context.Showtimes
                 .Include(s => s.Movie)
                 .Include(s => s.CinemaHall)
-                .Where(s => s.CinemaHall!.CinemaId == cinema.Id && s.Movie != null && s.Movie.IsNowShowing && !s.Movie.IsUpcoming)
+                .Where(s => !s.IsDeleted && s.EndTime >= now && s.CinemaHall!.CinemaId == cinema.Id && s.Movie != null && !s.Movie.IsDeleted && s.Movie.IsNowShowing && !s.Movie.IsUpcoming && (!s.Movie.EndDate.HasValue || s.Movie.EndDate.Value.Date >= today))
                 .OrderBy(s => s.StartTime)
                 .ToListAsync();
 
-            if (!showtimes.Any(s => s.StartTime.Date >= DateTime.Today))
+            if (!showtimes.Any(s => s.StartTime >= now))
             {
                 // Tự động đồng bộ lịch chiếu định dạng chuẩn cho rạp nếu rạp chưa có lịch chiếu
                 await DbInitializer.EnsureAllMoviesHaveShowtimesAsync(_context);
                 showtimes = await _context.Showtimes
                     .Include(s => s.Movie)
                     .Include(s => s.CinemaHall)
-                    .Where(s => s.CinemaHall!.CinemaId == cinema.Id && s.Movie != null && s.Movie.IsNowShowing && !s.Movie.IsUpcoming)
+                    .Where(s => !s.IsDeleted && s.EndTime >= now && s.CinemaHall!.CinemaId == cinema.Id && s.Movie != null && !s.Movie.IsDeleted && s.Movie.IsNowShowing && !s.Movie.IsUpcoming && (!s.Movie.EndDate.HasValue || s.Movie.EndDate.Value.Date >= today))
                     .OrderBy(s => s.StartTime)
                     .ToListAsync();
             }

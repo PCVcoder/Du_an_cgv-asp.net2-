@@ -30,6 +30,9 @@ namespace Du_an_CGV.Models
         [Display(Name = "Định dạng")]
         public string Format { get; set; } = "2D"; // 2D, 3D, IMAX, 4DX, L'Amour
 
+        [Display(Name = "Đã ẩn")]
+        public bool IsDeleted { get; set; } = false;
+
         public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
     }
 }

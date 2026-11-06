@@ -27,6 +27,9 @@ namespace Du_an_CGV.Models
         [Display(Name = "Giới thiệu rạp")]
         public string? Description { get; set; }
 
+        [Display(Name = "Đã ẩn")]
+        public bool IsDeleted { get; set; } = false;
+
         public ICollection<CinemaHall> CinemaHalls { get; set; } = new List<CinemaHall>();
         public ICollection<Showtime> Showtimes { get; set; } = new List<Showtime>();
         public ICollection<HallRentalRequest> HallRentalRequests { get; set; } = new List<HallRentalRequest>();

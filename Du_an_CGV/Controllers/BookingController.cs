@@ -31,6 +31,8 @@ namespace Du_an_CGV.Controllers
             }
 
             // 1. If showtimeId is provided, resolve movie and cinema from that showtime first
+            var now = DateTime.Now;
+            var today = DateTime.Today;
             Showtime? targetShowtime = null;
             if (showtimeId.HasValue && showtimeId.Value > 0)
             {
@@ -38,7 +40,7 @@ namespace Du_an_CGV.Controllers
                     .Include(s => s.Movie)
                     .Include(s => s.CinemaHall)
                         .ThenInclude(h => h!.Cinema)
-                    .FirstOrDefaultAsync(s => s.Id == showtimeId.Value);
+                    .FirstOrDefaultAsync(s => s.Id == showtimeId.Value && !s.IsDeleted && s.EndTime >= now);
 
                 if (targetShowtime != null)
                 {
@@ -48,7 +50,7 @@ namespace Du_an_CGV.Controllers
             }
 
             var movies = await _context.Movies
-                .Where(m => m.IsNowShowing && !m.IsUpcoming)
+                .Where(m => !m.IsDeleted && m.IsNowShowing && !m.IsUpcoming && (!m.EndDate.HasValue || m.EndDate.Value.Date >= today))
                 .OrderBy(m => m.Title)
                 .ToListAsync();
 
@@ -56,9 +58,9 @@ namespace Du_an_CGV.Controllers
             if (movieId.HasValue && movieId.Value > 0)
             {
                 var checkMovie = await _context.Movies.FindAsync(movieId.Value);
-                if (checkMovie != null && (checkMovie.IsUpcoming || !checkMovie.IsNowShowing))
+                if (checkMovie != null && (checkMovie.IsDeleted || checkMovie.IsUpcoming || !checkMovie.IsNowShowing || (checkMovie.EndDate.HasValue && checkMovie.EndDate.Value.Date < today)))
                 {
-                    TempData["ErrorMessage"] = $"Phim \"{checkMovie.Title}\" hiện đang ở trạng thái Sắp chiếu (chưa mở bán vé)!";
+                    TempData["ErrorMessage"] = $"Phim \"{checkMovie.Title}\" hiện không trong thời gian chiếu hoặc đã kết thúc!";
                     return RedirectToAction("Detail", "Movie", new { id = checkMovie.Id });
                 }
                 selectedMovie = movies.FirstOrDefault(m => m.Id == movieId.Value);
@@ -67,6 +69,7 @@ namespace Du_an_CGV.Controllers
             if (selectedMovie == null)
             {
                 var movieWithShowtimesId = await _context.Showtimes
+                    .Where(s => !s.IsDeleted && s.EndTime >= now)
                     .Select(s => s.MovieId)
                     .FirstOrDefaultAsync();
 
@@ -82,6 +85,7 @@ namespace Du_an_CGV.Controllers
             }
 
             var cinemas = await _context.Cinemas
+                .Where(c => !c.IsDeleted)
                 .OrderBy(c => c.City)
                 .ThenBy(c => c.Name)
                 .ToListAsync();
@@ -100,7 +104,7 @@ namespace Du_an_CGV.Controllers
                 if (selectedCinema != null)
                 {
                     currentHasShowtimes = await _context.Showtimes
-                        .AnyAsync(s => s.MovieId == selectedMovie.Id && s.CinemaHall!.CinemaId == selectedCinema.Id);
+                        .AnyAsync(s => !s.IsDeleted && s.EndTime >= now && s.MovieId == selectedMovie.Id && s.CinemaHall!.CinemaId == selectedCinema.Id);
                 }
 
                 if (!currentHasShowtimes)
@@ -108,7 +112,7 @@ namespace Du_an_CGV.Controllers
                     var availableSt = await _context.Showtimes
                         .Include(s => s.CinemaHall)
                             .ThenInclude(h => h!.Cinema)
-                        .Where(s => s.MovieId == selectedMovie.Id)
+                        .Where(s => !s.IsDeleted && s.EndTime >= now && s.MovieId == selectedMovie.Id)
                         .OrderBy(s => s.StartTime)
                         .FirstOrDefaultAsync();
 
@@ -130,6 +134,7 @@ namespace Du_an_CGV.Controllers
                 .Include(s => s.Movie)
                 .Include(s => s.CinemaHall)
                     .ThenInclude(h => h!.Cinema)
+                .Where(s => !s.IsDeleted && s.EndTime >= now)
                 .AsQueryable();
 
             if (selectedMovie != null)
@@ -153,7 +158,7 @@ namespace Du_an_CGV.Controllers
                     .Include(s => s.Movie)
                     .Include(s => s.CinemaHall)
                         .ThenInclude(h => h!.Cinema)
-                    .Where(s => s.MovieId == selectedMovie.Id)
+                    .Where(s => !s.IsDeleted && s.EndTime >= now && s.MovieId == selectedMovie.Id)
                     .OrderBy(s => s.StartTime)
                     .Take(10)
                     .ToListAsync();
@@ -307,9 +312,9 @@ namespace Du_an_CGV.Controllers
             }
 
             var showtime = await _context.Showtimes.FindAsync(showtimeId);
-            if (showtime == null)
+            if (showtime == null || showtime.IsDeleted || showtime.EndTime < DateTime.Now)
             {
-                return Json(new { success = false, message = "Suất chiếu không tồn tại hoặc đã bị hủy!" });
+                return Json(new { success = false, message = "Suất chiếu này đã kết thúc hoặc không còn khả dụng!" });
             }
 
             var user = await _userManager.GetUserAsync(User);
@@ -445,9 +450,9 @@ namespace Du_an_CGV.Controllers
                     .ThenInclude(h => h!.Cinema)
                 .FirstOrDefaultAsync(s => s.Id == showtimeId);
 
-            if (showtime == null)
+            if (showtime == null || showtime.IsDeleted || showtime.EndTime < DateTime.Now)
             {
-                TempData["ErrorMessage"] = "Suất chiếu không tồn tại hoặc đã bị hủy. Vui lòng chọn suất chiếu khác!";
+                TempData["ErrorMessage"] = "Suất chiếu này đã kết thúc hoặc không còn khả dụng. Vui lòng chọn suất chiếu khác!";
                 return RedirectToAction("Index");
             }
 

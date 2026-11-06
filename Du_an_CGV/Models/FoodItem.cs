@@ -31,6 +31,9 @@ namespace Du_an_CGV.Models
         [Display(Name = "Thứ tự hiển thị")]
         public int SortOrder { get; set; } = 0;
 
+        [Display(Name = "Đã ẩn")]
+        public bool IsDeleted { get; set; } = false;
+
         // Danh sách các đơn đặt vé có mua món ăn này
         public ICollection<BookingFoodItem> BookingFoodItems { get; set; } = new List<BookingFoodItem>();
     }

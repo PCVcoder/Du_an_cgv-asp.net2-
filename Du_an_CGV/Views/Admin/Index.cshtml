@@ -1,4 +1,4 @@
-﻿@model Du_an_CGV.Models.ViewModels.AdminDashboardViewModel
+@model Du_an_CGV.Models.ViewModels.AdminDashboardViewModel
 @{
     ViewData["Title"] = "CGV - Hệ Thống Quản Trị Hệ Thống";
     var activeTab = (string?)ViewBag.ActiveTab ?? "dashboard";
@@ -494,6 +494,7 @@
     @@media print {
         body * { visibility: hidden; }
         #modal-receipt, #modal-receipt * { visibility: visible; }
+        body.printing-revenue-report #tab-reports, body.printing-revenue-report #tab-reports * { visibility: visible; }
         #modal-receipt {
             position: absolute;
             left: 0;
@@ -503,6 +504,15 @@
             background: white !important;
             padding: 0 !important;
         }
+        body.printing-revenue-report #tab-reports {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            background: white !important;
+            padding: 10px !important;
+            display: block !important;
+        }
         .modal-box {
             box-shadow: none !important;
             max-width: 100% !important;
@@ -510,6 +520,12 @@
             padding: 0 !important;
         }
         .no-print { display: none !important; }
+        body.printing-revenue-report .admin-aside,
+        body.printing-revenue-report .btn-action,
+        body.printing-revenue-report .btn-add,
+        body.printing-revenue-report .rep-filter-card {
+            display: none !important;
+        }
     }
 </style>
 }
@@ -524,6 +540,9 @@
         <nav style="flex: 1; padding-top: 10px;">
             <button class="admin-nav-item @(activeTab == "dashboard" ? "active" : "")" onclick="switchAdminTab('dashboard', this)">
                 <span>📊</span> Tổng quan
+            </button>
+            <button class="admin-nav-item @(activeTab == "reports" ? "active" : "")" onclick="switchAdminTab('reports', this)">
+                <span>📈</span> Thống Kê & Báo Cáo
             </button>
             <button class="admin-nav-item @(activeTab == "movies" ? "active" : "")" onclick="switchAdminTab('movies', this)">
                 <span>🎬</span> Quản lý Phim (@Model.Movies.Count)
@@ -741,6 +760,324 @@
             </div>
         </div>
 
+        <!-- TAB: THỐNG KÊ DOANH THU & BÁO CÁO -->
+        <div id="tab-reports" style="@(activeTab == "reports" ? "" : "display: none;")">
+            <div class="admin-title">
+                <div>
+                    <span>📈 Thống Kê Doanh Thu & Báo Cáo CGV</span>
+                    <div style="font-size: 0.8rem; font-weight: 500; color: #64748b; margin-top: 4px;">
+                        Phân tích doanh thu vé, doanh thu F&B bắp nước, số lượng vé và tỷ lệ lấp đầy ghế theo thời gian thực
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <button type="button" class="btn-action" onclick="exportRevenueReport()" style="background: #15803d; color: white; padding: 8px 16px; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(21,128,61,0.2);">
+                        <span>📥</span> <span>Xuất Báo Cáo (CSV / Excel)</span>
+                    </button>
+                    <button type="button" class="btn-action" onclick="printRevenueReport()" style="background: #334155; color: white; padding: 8px 16px; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                        <span>🖨️</span> <span>In Báo Cáo</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- BỘ LỌC BÁO CÁO NÂNG CAO -->
+            <div class="rep-filter-card" style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
+                <!-- Phím tắt khoảng thời gian -->
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px dashed #e2e8f0;">
+                    <span style="font-size: 0.78rem; font-weight: 700; color: #475569; display: flex; align-items: center; gap: 4px;">
+                        <span>⚡</span> Chọn nhanh:
+                    </span>
+                    <button type="button" class="btn-action rep-preset-btn" onclick="setReportDatePreset('today', this)" style="padding: 5px 12px; font-size: 0.78rem; border-radius: 4px; border: 1px solid #cbd5e1; background: white; color: #334155; cursor: pointer; font-weight: 600;">Hôm nay</button>
+                    <button type="button" class="btn-action rep-preset-btn" onclick="setReportDatePreset('7days', this)" style="padding: 5px 12px; font-size: 0.78rem; border-radius: 4px; border: 1px solid #cbd5e1; background: white; color: #334155; cursor: pointer; font-weight: 600;">7 ngày qua</button>
+                    <button type="button" class="btn-action rep-preset-btn active" onclick="setReportDatePreset('30days', this)" style="padding: 5px 12px; font-size: 0.78rem; border-radius: 4px; border: 1px solid #e30613; background: #e30613; color: white; cursor: pointer; font-weight: 700;">30 ngày qua</button>
+                    <button type="button" class="btn-action rep-preset-btn" onclick="setReportDatePreset('thismonth', this)" style="padding: 5px 12px; font-size: 0.78rem; border-radius: 4px; border: 1px solid #cbd5e1; background: white; color: #334155; cursor: pointer; font-weight: 600;">Tháng này</button>
+                    <button type="button" class="btn-action rep-preset-btn" onclick="setReportDatePreset('alltime', this)" style="padding: 5px 12px; font-size: 0.78rem; border-radius: 4px; border: 1px solid #cbd5e1; background: white; color: #334155; cursor: pointer; font-weight: 600;">Toàn thời gian</button>
+                    <span id="rep-loading-indicator" style="display: none; font-size: 0.78rem; color: #0284c7; font-weight: 600; margin-left: auto;">
+                        <span style="display: inline-block; width: 12px; height: 12px; border: 2px solid #0284c7; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite;"></span> Đang truy vấn CSDL...
+                    </span>
+                </div>
+
+                <!-- Form chọn thời gian & lọc rạp / phim -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; align-items: flex-end;">
+                    <div>
+                        <label style="font-size: 0.75rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">📅 Từ ngày:</label>
+                        <input type="date" id="rep-from-date" class="form-control" style="font-size: 0.85rem; padding: 7px 10px; border-radius: 6px; border: 1px solid #cbd5e1; width: 100%;" onchange="loadRevenueReport()" />
+                    </div>
+
+                    <div>
+                        <label style="font-size: 0.75rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">📅 Đến ngày:</label>
+                        <input type="date" id="rep-to-date" class="form-control" style="font-size: 0.85rem; padding: 7px 10px; border-radius: 6px; border: 1px solid #cbd5e1; width: 100%;" onchange="loadRevenueReport()" />
+                    </div>
+
+                    <div>
+                        <label style="font-size: 0.75rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">🏛️ Lọc theo Cụm Rạp:</label>
+                        <select id="rep-cinema-filter" class="form-control" style="font-size: 0.85rem; padding: 7px 10px; border-radius: 6px; border: 1px solid #cbd5e1; width: 100%;" onchange="loadRevenueReport()">
+                            <option value="">-- Tất cả cụm rạp (@Model.Cinemas.Count) --</option>
+                            @foreach (var c in Model.Cinemas)
+                            {
+                                <option value="@c.Id">@c.Name (@c.City)</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="font-size: 0.75rem; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">🎬 Lọc theo Phim:</label>
+                        <select id="rep-movie-filter" class="form-control" style="font-size: 0.85rem; padding: 7px 10px; border-radius: 6px; border: 1px solid #cbd5e1; width: 100%;" onchange="loadRevenueReport()">
+                            <option value="">-- Tất cả phim (@Model.Movies.Count) --</option>
+                            @foreach (var m in Model.Movies)
+                            {
+                                <option value="@m.Id">@m.Title</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" class="btn-action" onclick="loadRevenueReport()" style="flex: 1; padding: 8px 14px; font-size: 0.85rem; background: #e30613; color: white; font-weight: 700; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                            <span>🔍</span> <span>Xem Báo Cáo</span>
+                        </button>
+                        <button type="button" class="btn-action" onclick="resetReportFilters()" style="padding: 8px 12px; font-size: 0.82rem; background: #f8fafc; color: #475569; font-weight: 600; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer;">
+                            ↺ Đặt lại
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6 THẺ KPI TỔNG HỢP (SUMMARY METRICS) -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 22px;">
+                <!-- 1. Tổng doanh thu -->
+                <div style="background: white; border-radius: 8px; padding: 16px 18px; border-left: 5px solid #16a34a; box-shadow: 0 2px 6px rgba(0,0,0,0.04); border-top: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                            <div style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Tổng Doanh Thu</div>
+                            <div id="rep-kpi-total-rev" style="font-size: 1.35rem; font-weight: 800; color: #16a34a; margin-top: 4px; font-family: 'Montserrat', sans-serif;">0 đ</div>
+                        </div>
+                        <div style="font-size: 1.6rem; opacity: 0.9;">💰</div>
+                    </div>
+                    <div style="font-size: 0.73rem; color: #94a3b8; margin-top: 6px;">Đơn hàng đã thanh toán</div>
+                </div>
+
+                <!-- 2. Doanh thu vé -->
+                <div style="background: white; border-radius: 8px; padding: 16px 18px; border-left: 5px solid #e30613; box-shadow: 0 2px 6px rgba(0,0,0,0.04); border-top: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                            <div style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Doanh Thu Vé</div>
+                            <div id="rep-kpi-ticket-rev" style="font-size: 1.35rem; font-weight: 800; color: #e30613; margin-top: 4px; font-family: 'Montserrat', sans-serif;">0 đ</div>
+                        </div>
+                        <div style="font-size: 1.6rem; opacity: 0.9;">🎟️</div>
+                    </div>
+                    <div id="rep-kpi-ticket-share" style="font-size: 0.73rem; color: #94a3b8; margin-top: 6px;">Chiếm 0% tổng thu</div>
+                </div>
+
+                <!-- 3. Doanh thu F&B -->
+                <div style="background: white; border-radius: 8px; padding: 16px 18px; border-left: 5px solid #d97706; box-shadow: 0 2px 6px rgba(0,0,0,0.04); border-top: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                            <div style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Doanh Thu Bắp Nước (F&B)</div>
+                            <div id="rep-kpi-food-rev" style="font-size: 1.35rem; font-weight: 800; color: #d97706; margin-top: 4px; font-family: 'Montserrat', sans-serif;">0 đ</div>
+                        </div>
+                        <div style="font-size: 1.6rem; opacity: 0.9;">🍿</div>
+                    </div>
+                    <div id="rep-kpi-food-share" style="font-size: 0.73rem; color: #94a3b8; margin-top: 6px;">Chiếm 0% tổng thu</div>
+                </div>
+
+                <!-- 4. Số lượng vé bán -->
+                <div style="background: white; border-radius: 8px; padding: 16px 18px; border-left: 5px solid #0284c7; box-shadow: 0 2px 6px rgba(0,0,0,0.04); border-top: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                            <div style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Số Lượng Vé Bán</div>
+                            <div id="rep-kpi-tickets-sold" style="font-size: 1.35rem; font-weight: 800; color: #0284c7; margin-top: 4px; font-family: 'Montserrat', sans-serif;">0 vé</div>
+                        </div>
+                        <div style="font-size: 1.6rem; opacity: 0.9;">🎫</div>
+                    </div>
+                    <div id="rep-kpi-orders-count" style="font-size: 0.73rem; color: #94a3b8; margin-top: 6px;">0 đơn hoàn tất</div>
+                </div>
+
+                <!-- 5. Tỷ lệ lấp đầy ghế -->
+                <div style="background: white; border-radius: 8px; padding: 16px 18px; border-left: 5px solid #7c3aed; box-shadow: 0 2px 6px rgba(0,0,0,0.04); border-top: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                            <div style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Tỷ Lệ Lấp Đầy Ghế</div>
+                            <div id="rep-kpi-occupancy" style="font-size: 1.35rem; font-weight: 800; color: #7c3aed; margin-top: 4px; font-family: 'Montserrat', sans-serif;">0%</div>
+                        </div>
+                        <div style="font-size: 1.6rem; opacity: 0.9;">📈</div>
+                    </div>
+                    <div style="font-size: 0.73rem; color: #94a3b8; margin-top: 6px;">Occupancy Rate phòng chiếu</div>
+                </div>
+
+                <!-- 6. Giá trị trung bình đơn -->
+                <div style="background: white; border-radius: 8px; padding: 16px 18px; border-left: 5px solid #0d9488; box-shadow: 0 2px 6px rgba(0,0,0,0.04); border-top: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                            <div style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Giá Trị TB / Đơn</div>
+                            <div id="rep-kpi-avg-order" style="font-size: 1.35rem; font-weight: 800; color: #0d9488; margin-top: 4px; font-family: 'Montserrat', sans-serif;">0 đ</div>
+                        </div>
+                        <div style="font-size: 1.6rem; opacity: 0.9;">🧾</div>
+                    </div>
+                    <div style="font-size: 0.73rem; color: #94a3b8; margin-top: 6px;">Doanh thu TB mỗi giao dịch</div>
+                </div>
+            </div>
+
+            <!-- LUỒNG NGOẠI LỆ 3A: KHÔNG CÓ DỮ LIỆU -->
+            <div id="rep-empty-state" style="display: none; background: white; border-radius: 8px; padding: 48px 24px; text-align: center; border: 1px dashed #cbd5e1; margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
+                <div style="font-size: 3rem; margin-bottom: 12px;">📂</div>
+                <h4 style="font-size: 1.15rem; font-weight: 700; color: #1e293b; margin-bottom: 8px;">Không có dữ liệu trong khoảng thời gian chọn</h4>
+                <p style="font-size: 0.85rem; color: #64748b; max-width: 520px; margin: 0 auto 16px;">
+                    Hệ thống không tìm thấy bất kỳ giao dịch đặt vé nào đã thanh toán thành công thỏa mãn các tiêu chí lọc ngày, cụm rạp hoặc phim này.
+                </p>
+                <button type="button" class="btn-action" onclick="resetReportFilters()" style="padding: 7px 18px; font-size: 0.82rem; background: #e30613; color: white; border: none; border-radius: 4px; font-weight: 700; cursor: pointer;">
+                    ↺ Đặt lại toàn bộ bộ lọc
+                </button>
+            </div>
+
+            <!-- KHỐI BIỂU ĐỒ TRỰC QUAN (CHARTS) -->
+            <div id="rep-charts-section" style="margin-bottom: 24px;">
+                <!-- Hàng 1: Diễn biến thời gian (Line/Bar) + Cơ cấu nguồn thu (Doughnut) -->
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 16px;">
+                    <div style="background: white; border-radius: 8px; padding: 18px 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); border: 1px solid #e2e8f0;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                            <strong style="font-size: 0.92rem; color: #1e293b; display: flex; align-items: center; gap: 6px;">
+                                <span>📈</span> Diễn Biến Doanh Thu Theo Thời Gian (Vé vs F&B)
+                            </strong>
+                            <span style="font-size: 0.72rem; color: #64748b; background: #f1f5f9; padding: 2px 8px; border-radius: 4px;">Đơn vị: VNĐ</span>
+                        </div>
+                        <div style="position: relative; height: 280px; width: 100%;">
+                            <canvas id="rep-chart-timeline"></canvas>
+                        </div>
+                    </div>
+
+                    <div style="background: white; border-radius: 8px; padding: 18px 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); border: 1px solid #e2e8f0;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                            <strong style="font-size: 0.92rem; color: #1e293b; display: flex; align-items: center; gap: 6px;">
+                                <span>🥧</span> Cơ Cấu Nguồn Thu
+                            </strong>
+                            <span style="font-size: 0.72rem; color: #64748b; background: #f1f5f9; padding: 2px 8px; border-radius: 4px;">Tỷ trọng %</span>
+                        </div>
+                        <div style="position: relative; height: 280px; width: 100%; display: flex; align-items: center; justify-content: center;">
+                            <canvas id="rep-chart-revenue-mix"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hàng 2: Doanh thu theo Phim + Doanh thu theo Cụm Rạp -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div style="background: white; border-radius: 8px; padding: 18px 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); border: 1px solid #e2e8f0;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                            <strong style="font-size: 0.92rem; color: #1e293b; display: flex; align-items: center; gap: 6px;">
+                                <span>🎬</span> Top Phim Doanh Thu Cao Nhất
+                            </strong>
+                            <span style="font-size: 0.72rem; color: #64748b; background: #f1f5f9; padding: 2px 8px; border-radius: 4px;">Xếp hạng</span>
+                        </div>
+                        <div style="position: relative; height: 260px; width: 100%;">
+                            <canvas id="rep-chart-movies"></canvas>
+                        </div>
+                    </div>
+
+                    <div style="background: white; border-radius: 8px; padding: 18px 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); border: 1px solid #e2e8f0;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                            <strong style="font-size: 0.92rem; color: #1e293b; display: flex; align-items: center; gap: 6px;">
+                                <span>🏛️</span> Top Cụm Rạp CGV Doanh Thu Cao Nhất
+                            </strong>
+                            <span style="font-size: 0.72rem; color: #64748b; background: #f1f5f9; padding: 2px 8px; border-radius: 4px;">Xếp hạng</span>
+                        </div>
+                        <div style="position: relative; height: 260px; width: 100%;">
+                            <canvas id="rep-chart-cinemas"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BẢNG DỮ LIỆU BÁO CÁO CHI TIẾT (TABLES) -->
+            <div id="rep-tables-section" style="background: white; border-radius: 8px; padding: 20px 22px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; margin-bottom: 30px;">
+                <!-- Thanh chuyển Tab bảng -->
+                <div style="display: flex; gap: 8px; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 16px; flex-wrap: wrap;">
+                    <button type="button" class="btn-action rep-table-tab active" onclick="switchReportSubTable('movie', this)" style="padding: 7px 16px; font-size: 0.82rem; font-weight: 700; border-radius: 6px; border: none; background: #e30613; color: white; cursor: pointer;">
+                        🎬 Báo Cáo Theo Phim (<span id="rep-badge-movies-count">0</span>)
+                    </button>
+                    <button type="button" class="btn-action rep-table-tab" onclick="switchReportSubTable('cinema', this)" style="padding: 7px 16px; font-size: 0.82rem; font-weight: 600; border-radius: 6px; border: 1px solid #cbd5e1; background: white; color: #334155; cursor: pointer;">
+                        🏛️ Báo Cáo Theo Cụm Rạp (<span id="rep-badge-cinemas-count">0</span>)
+                    </button>
+                    <button type="button" class="btn-action rep-table-tab" onclick="switchReportSubTable('payment', this)" style="padding: 7px 16px; font-size: 0.82rem; font-weight: 600; border-radius: 6px; border: 1px solid #cbd5e1; background: white; color: #334155; cursor: pointer;">
+                        💳 Kênh Thanh Toán (<span id="rep-badge-payments-count">0</span>)
+                    </button>
+                    <button type="button" class="btn-action rep-table-tab" onclick="switchReportSubTable('details', this)" style="padding: 7px 16px; font-size: 0.82rem; font-weight: 600; border-radius: 6px; border: 1px solid #cbd5e1; background: white; color: #334155; cursor: pointer;">
+                        🧾 Chi Tiết Đơn Đặt Vé (<span id="rep-badge-details-count">0</span>)
+                    </button>
+                </div>
+
+                <!-- Bảng 1: Theo Phim -->
+                <div id="rep-subtable-movie" style="overflow-x: auto;">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">STT</th>
+                                <th>Phim Chiếu Rạp</th>
+                                <th style="text-align: center;">Số Vé Bán Ra</th>
+                                <th style="text-align: right;">Doanh Thu Vé</th>
+                                <th style="text-align: right;">Doanh Thu F&B</th>
+                                <th style="text-align: right;">Tổng Doanh Thu</th>
+                                <th style="text-align: right; width: 120px;">Tỷ Trọng (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rep-tbody-movie"></tbody>
+                    </table>
+                </div>
+
+                <!-- Bảng 2: Theo Cụm Rạp -->
+                <div id="rep-subtable-cinema" style="display: none; overflow-x: auto;">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">STT</th>
+                                <th>Cụm Rạp CGV</th>
+                                <th>Khu Vực / Tỉnh Thành</th>
+                                <th style="text-align: center;">Số Vé Bán Ra</th>
+                                <th style="text-align: right;">Doanh Thu Vé</th>
+                                <th style="text-align: right;">Doanh Thu F&B</th>
+                                <th style="text-align: right;">Tổng Doanh Thu</th>
+                                <th style="text-align: right; width: 120px;">Tỷ Trọng (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rep-tbody-cinema"></tbody>
+                    </table>
+                </div>
+
+                <!-- Bảng 3: Theo Kênh Thanh Toán -->
+                <div id="rep-subtable-payment" style="display: none; overflow-x: auto;">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">STT</th>
+                                <th>Kênh Thanh Toán</th>
+                                <th style="text-align: center;">Số Đơn Hoàn Tất</th>
+                                <th style="text-align: right;">Tổng Tiền Giao Dịch</th>
+                                <th style="text-align: right; width: 140px;">Tỷ Trọng Doanh Thu</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rep-tbody-payment"></tbody>
+                    </table>
+                </div>
+
+                <!-- Bảng 4: Chi Tiết Từng Giao Dịch -->
+                <div id="rep-subtable-details" style="display: none; overflow-x: auto;">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Mã Vé & Thời Gian</th>
+                                <th>Khách Hàng</th>
+                                <th>Phim & Rạp Chiếu</th>
+                                <th>Ghế Đặt</th>
+                                <th>Combo Bắp Nước</th>
+                                <th style="text-align: right;">Tiền Vé</th>
+                                <th style="text-align: right;">Tiền F&B</th>
+                                <th style="text-align: right;">Tổng Thanh Toán</th>
+                                <th>Kênh TT</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rep-tbody-details"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <!-- TAB 2: MOVIES MANAGEMENT (CRUD) -->
         <div id="tab-movies" style="@(activeTab == "movies" ? "" : "display: none;")">
             <div class="admin-title">
@@ -796,7 +1133,11 @@
                                 <td>@m.Duration phút</td>
                                 <td><span class="badge" style="background: @m.RatingColor;">@m.Rating</span></td>
                                 <td>
-                                    @if (m.IsNowShowing)
+                                    @if (m.IsDeleted)
+                                    {
+                                        <span class="badge" style="background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; font-weight: 700; padding: 4px 8px; border-radius: 12px; font-size: 0.75rem;">🔴 Đã ẩn</span>
+                                    }
+                                    else if (m.IsNowShowing)
                                     {
                                         <span class="badge" style="background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; font-weight: 700; padding: 4px 8px; border-radius: 12px; font-size: 0.75rem;">🟢 Đang chiếu</span>
                                     }
@@ -810,12 +1151,22 @@
                                     }
                                 </td>
                                 <td><small>@(m.Formats ?? "2D Digital")</small></td>
-                                <td style="text-align: right;">
+                                <td style="text-align: right; white-space: nowrap;">
                                     <button class="btn-action btn-edit" onclick="openEditMovieModal(@m.Id)">Sửa</button>
-                                    <form asp-controller="Admin" asp-action="DeleteMovie" asp-route-id="@m.Id" method="post" style="display:inline;" onsubmit="return confirm('Bạn có chắc chắn muốn xóa phim \'@m.Title\'?');">
-                                        @Html.AntiForgeryToken()
-                                        <button type="submit" class="btn-action btn-del">Xóa</button>
-                                    </form>
+                                    @if (m.IsDeleted)
+                                    {
+                                        <form asp-controller="Admin" asp-action="RestoreMovie" asp-route-id="@m.Id" method="post" style="display:inline;">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn-action" style="background:#16a34a;color:white;">Hiện lại</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <form asp-controller="Admin" asp-action="DeleteMovie" asp-route-id="@m.Id" method="post" style="display:inline;" onsubmit="return confirm('Bạn có chắc muốn ẩn phim \'@m.Title\'? Phim sẽ không hiển thị trên trang chủ nhưng lịch sử đặt vé vẫn được bảo toàn.');">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn-action btn-del">Ẩn</button>
+                                        </form>
+                                    }
                                 </td>
                             </tr>
                         }
@@ -909,8 +1260,14 @@
                         @foreach (var c in Model.Cinemas)
                         {
                             var hallCount = c.CinemaHalls?.Count ?? 0;
-                            <tr class="cinema-table-row" data-city="@c.City">
-                                <td><strong>@c.Name</strong></td>
+                            <tr class="cinema-table-row" data-city="@c.City" style="@(c.IsDeleted ? "opacity: 0.65; background: #fafafa;" : "")">
+                                <td>
+                                    <strong>@c.Name</strong>
+                                    @if (c.IsDeleted)
+                                    {
+                                        <span class="badge" style="background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; margin-left: 6px; font-size: 0.72rem;">🔴 Đã ẩn</span>
+                                    }
+                                </td>
                                 <td><span class="badge" style="background: #e30613; font-weight: 600; font-size: 0.78rem;">@c.City</span></td>
                                 <td><small>@c.Address</small></td>
                                 <td>@c.Hotline</td>
@@ -929,10 +1286,20 @@
                                         🏛️ Phòng (@hallCount)
                                     </button>
                                     <button class="btn-action btn-edit" onclick="openEditCinemaModal(@c.Id)">Sửa rạp</button>
-                                    <form asp-controller="Admin" asp-action="DeleteCinema" asp-route-id="@c.Id" method="post" style="display:inline;" onsubmit="return confirm('Bạn có chắc muốn xóa rạp \'@c.Name\' và toàn bộ phòng chiếu liên quan?');">
-                                        @Html.AntiForgeryToken()
-                                        <button type="submit" class="btn-action btn-del">Xóa</button>
-                                    </form>
+                                    @if (c.IsDeleted)
+                                    {
+                                        <form asp-controller="Admin" asp-action="RestoreCinema" asp-route-id="@c.Id" method="post" style="display:inline;">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn-action" style="background:#16a34a;color:white;">Hiện lại</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <form asp-controller="Admin" asp-action="DeleteCinema" asp-route-id="@c.Id" method="post" style="display:inline;" onsubmit="return confirm('Bạn có chắc muốn ẩn rạp \'@c.Name\'? Rạp sẽ ẩn trên hệ thống nhưng dữ liệu và báo cáo vẫn được bảo toàn.');">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn-action btn-del">Ẩn</button>
+                                        </form>
+                                    }
                                 </td>
                             </tr>
                         }
@@ -972,26 +1339,9 @@
                     .OrderBy(c => c)
                     .ToList();
 
-                // THUẬT TOÁN KIỂM TRA TRÙNG LỊCH:
-                // QUY TẮC CỐT LÕI:
-                // - Chỉ tính là trùng khi CÙNG MỘT PHÒNG CHIẾU (st1.CinemaHallId == st2.CinemaHallId) VÀ thời gian chiếu giao nhau!
-                // - KHÁC PHÒNG CHIẾU (ví dụ Cinema 01 và Cinema 02) thì chiếu cùng giờ là HOÀN TOÀN HỢP LỆ, KHÔNG BAO GIỜ BÁO TRÙNG!
-                var conflictShowtimeIds = new HashSet<int>();
-                var conflictDetails = new Dictionary<int, string>();
-                foreach (var st1 in Model.Showtimes)
-                {
-                    foreach (var st2 in Model.Showtimes)
-                    {
-                        if (st1.Id != st2.Id && st1.CinemaHallId == st2.CinemaHallId && st1.StartTime < st2.EndTime && st1.EndTime > st2.StartTime)
-                        {
-                            conflictShowtimeIds.Add(st1.Id);
-                            var hallName = st1.CinemaHall?.Name ?? "phòng";
-                            var otherTitle = st2.Movie?.Title ?? "phim khác";
-                            conflictDetails[st1.Id] = $"Cùng {hallName} với \"{otherTitle}\" ({st2.StartTime:HH:mm} - {st2.EndTime:HH:mm})";
-                            break;
-                        }
-                    }
-                }
+                // Lấy kết quả kiểm tra trùng lịch đã được tính toán tối ưu từ Controller
+                var conflictShowtimeIds = Model.ConflictShowtimeIds ?? new HashSet<int>();
+                var conflictDetails = Model.ConflictDetails ?? new Dictionary<int, string>();
             }
 
             <!-- KHỐI TÌM KIẾM & BỘ LỌC PHÂN LOẠI SUẤT CHIẾU -->
@@ -1092,6 +1442,7 @@
                         @foreach (var st in Model.Showtimes)
                         {
                             var isConflict = conflictShowtimeIds.Contains(st.Id);
+                            var isEnded = st.EndTime < DateTime.Now;
                             <tr class="showtime-table-row @(isConflict ? "conflict-showtime-row" : "")"
                                 data-movie="@(st.Movie?.Title ?? "")"
                                 data-cinema="@(st.CinemaHall?.Cinema?.Name ?? "")"
@@ -1099,7 +1450,7 @@
                                 data-date="@st.StartTime.ToString("yyyy-MM-dd")"
                                 data-format="@st.Format"
                                 data-conflict="@(isConflict ? "true" : "false")"
-                                style="@(isConflict ? "background: #fff8f8;" : "")">
+                                style="@(isConflict ? "background: #fff8f8;" : (st.IsDeleted ? "opacity: 0.6; background: #fafafa;" : (isEnded ? "opacity: 0.72; background: #fbfbfb;" : "")))">
                                 <td>
                                     <strong>@(st.Movie?.Title ?? "Phim đã xóa")</strong>
                                     @if (isConflict && conflictDetails.ContainsKey(st.Id))
@@ -1115,16 +1466,42 @@
                                     <strong>@(st.CinemaHall?.Cinema?.Name ?? "CGV")</strong><br>
                                     <small style="color: #666;">@(st.CinemaHall?.Name ?? "Cinema") (@(st.CinemaHall?.HallType ?? ""))</small>
                                 </td>
-                                <td><strong style="color: #e30613;">@st.StartTime.ToString("dd/MM/yyyy HH:mm")</strong></td>
+                                <td>
+                                    <strong style="color: #e30613;">@st.StartTime.ToString("dd/MM/yyyy HH:mm")</strong>
+                                    <div style="margin-top: 3px;">
+                                        @if (st.IsDeleted)
+                                        {
+                                            <span class="badge" style="background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; font-size: 0.68rem; padding: 2px 6px;">🔴 Đã ẩn</span>
+                                        }
+                                        else if (isEnded)
+                                        {
+                                            <span class="badge" style="background: #e2e8f0; color: #64748b; font-size: 0.68rem; padding: 2px 6px;">⏱️ Đã kết thúc</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge" style="background: #ecfdf5; color: #047857; font-size: 0.68rem; padding: 2px 6px;">🟢 Sắp chiếu</span>
+                                        }
+                                    </div>
+                                </td>
                                 <td><small style="font-weight: 600; color: #444;">@st.EndTime.ToString("HH:mm")</small></td>
                                 <td><span class="badge" style="background: #37474f;">@st.Format</span></td>
                                 <td><strong>@st.Price.ToString("N0") đ</strong></td>
                                 <td style="text-align: right; white-space: nowrap;">
                                     <button class="btn-action btn-edit" onclick="openEditShowtimeModal(@st.Id)">Sửa</button>
-                                    <form asp-controller="Admin" asp-action="DeleteShowtime" asp-route-id="@st.Id" method="post" style="display:inline;" onsubmit="return confirm('Bạn có chắc muốn xóa suất chiếu này?');">
-                                        @Html.AntiForgeryToken()
-                                        <button type="submit" class="btn-action btn-del">Xóa</button>
-                                    </form>
+                                    @if (st.IsDeleted)
+                                    {
+                                        <form asp-controller="Admin" asp-action="RestoreShowtime" asp-route-id="@st.Id" method="post" style="display:inline;">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn-action" style="background:#16a34a;color:white;">Hiện lại</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <form asp-controller="Admin" asp-action="DeleteShowtime" asp-route-id="@st.Id" method="post" style="display:inline;" onsubmit="return confirm('Bạn có chắc muốn ẩn suất chiếu này?');">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn-action btn-del">Ẩn</button>
+                                        </form>
+                                    }
                                 </td>
                             </tr>
                         }
@@ -1164,12 +1541,16 @@
                     <tbody>
                         @foreach (var f in Model.FoodItems)
                         {
-                            <tr class="food-row" data-cat="@f.Category">
+                            <tr class="food-row" data-cat="@f.Category" style="@(f.IsDeleted ? "opacity: 0.65; background: #fafafa;" : "")">
                                 <td>
                                     <img src="@f.ImageUrl" style="width: 52px; height: 52px; object-fit: cover; border-radius: 4px; box-shadow: 0 1px 4px rgba(0,0,0,0.15);" alt="@f.Name" onerror="this.src='https://images.unsplash.com/photo-1585647347483-22b66260dfff?w=500'" />
                                 </td>
                                 <td>
                                     <strong>@f.Name</strong>
+                                    @if (f.IsDeleted)
+                                    {
+                                        <span class="badge" style="background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; font-size: 0.7rem; margin-left: 6px;">🔴 Đã ẩn</span>
+                                    }
                                     @if (!string.IsNullOrEmpty(f.Description))
                                     {
                                         <div style="font-size: 0.75rem; color: #666; margin-top: 2px; max-width: 380px;">@f.Description</div>
@@ -1202,10 +1583,20 @@
                                 </td>
                                 <td style="text-align: right; white-space: nowrap;">
                                     <button class="btn-action btn-edit" onclick="openEditFoodModal(@f.Id)">Sửa</button>
-                                    <form asp-controller="Admin" asp-action="DeleteFoodItem" asp-route-id="@f.Id" method="post" style="display:inline;" onsubmit="return confirm('Bạn có chắc muốn xóa món \'@f.Name\' khỏi menu F&B?');">
-                                        @Html.AntiForgeryToken()
-                                        <button type="submit" class="btn-action btn-del">Xóa</button>
-                                    </form>
+                                    @if (f.IsDeleted)
+                                    {
+                                        <form asp-controller="Admin" asp-action="RestoreFoodItem" asp-route-id="@f.Id" method="post" style="display:inline;">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn-action" style="background:#16a34a;color:white;">Hiện lại</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <form asp-controller="Admin" asp-action="DeleteFoodItem" asp-route-id="@f.Id" method="post" style="display:inline;" onsubmit="return confirm('Bạn có chắc muốn ẩn món \'@f.Name\' khỏi menu F&B?');">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn-action btn-del">Ẩn</button>
+                                        </form>
+                                    }
                                 </td>
                             </tr>
                         }
@@ -1247,7 +1638,11 @@
                                 <td><span class="badge" style="background: #b0000e;">@p.CategoryLabel</span></td>
                                 <td><small>@p.DateRange</small></td>
                                 <td>
-                                    @if (p.IsActive)
+                                    @if (p.IsDeleted)
+                                    {
+                                        <span style="color: #b91c1c; font-weight: 700;">🔴 Đã ẩn</span>
+                                    }
+                                    else if (p.IsActive)
                                     {
                                         <span style="color: #2e7d32; font-weight: 700;">🟢 Đang chạy</span>
                                     }
@@ -1258,10 +1653,20 @@
                                 </td>
                                 <td style="text-align: right;">
                                     <button class="btn-action btn-edit" onclick="openEditPromoModal(@p.Id)">Sửa</button>
-                                    <form asp-controller="Admin" asp-action="DeletePromo" asp-route-id="@p.Id" method="post" style="display:inline;" onsubmit="return confirm('Bạn có chắc muốn xóa ưu đãi này?');">
-                                        @Html.AntiForgeryToken()
-                                        <button type="submit" class="btn-action btn-del">Xóa</button>
-                                    </form>
+                                    @if (p.IsDeleted)
+                                    {
+                                        <form asp-controller="Admin" asp-action="RestorePromo" asp-route-id="@p.Id" method="post" style="display:inline;">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn-action" style="background:#16a34a;color:white;">Hiện lại</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <form asp-controller="Admin" asp-action="DeletePromo" asp-route-id="@p.Id" method="post" style="display:inline;" onsubmit="return confirm('Bạn có chắc muốn ẩn ưu đãi này?');">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn-action btn-del">Ẩn</button>
+                                        </form>
+                                    }
                                 </td>
                             </tr>
                         }
@@ -1307,7 +1712,11 @@
                                 <td><span class="badge" style="background: #333;">@b.SeatsList</span></td>
                                 <td><strong style="color: #2e7d32;">@b.TotalAmount.ToString("N0") đ</strong><br><small style="color: #777;">@b.PaymentMethod</small></td>
                                 <td>
-                                    @if (b.Status == "Đã thanh toán")
+                                    @if (b.IsDeleted)
+                                    {
+                                        <span class="badge" style="background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca;">🔴 Đã ẩn</span>
+                                    }
+                                    else if (b.Status == "Đã thanh toán")
                                     {
                                         <span class="badge" style="background: #2e7d32;">Đã thanh toán</span>
                                     }
@@ -1320,7 +1729,7 @@
                                         <span class="badge" style="background: #888;">Đã hủy</span>
                                     }
                                 </td>
-                                <td style="text-align: right;">
+                                <td style="text-align: right; white-space: nowrap;">
                                     <form asp-controller="Admin" asp-action="UpdateBookingStatus" method="post" style="display:inline;">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="id" value="@b.Id" />
@@ -1333,6 +1742,20 @@
                                             <button type="submit" name="status" value="Đã hủy" class="btn-action btn-del" title="Hủy đơn vé">Hủy</button>
                                         }
                                     </form>
+                                    @if (b.IsDeleted)
+                                    {
+                                        <form asp-controller="Admin" asp-action="RestoreBooking" asp-route-id="@b.Id" method="post" style="display:inline;">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn-action" style="background:#16a34a;color:white;" title="Khôi phục hiển thị">Khôi phục</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <form asp-controller="Admin" asp-action="DeleteBooking" asp-route-id="@b.Id" method="post" style="display:inline;" onsubmit="return confirm('Bạn có chắc muốn ẩn đơn đặt vé @b.BookingCode?');">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn-action" style="background:#64748b;color:white;" title="Ẩn đơn vé">Ẩn</button>
+                                        </form>
+                                    }
                                 </td>
                             </tr>
                         }
@@ -1892,7 +2315,11 @@
                                 </td>
                                 <td><small>@inq.CreatedAt.ToString("dd/MM/yyyy HH:mm")</small></td>
                                 <td>
-                                    @if (inq.Status == "Chưa đọc")
+                                    @if (inq.IsDeleted || inq.Status == "Đã ẩn")
+                                    {
+                                        <span class="badge" style="background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca;">🔴 Đã ẩn</span>
+                                    }
+                                    else if (inq.Status == "Chưa đọc")
                                     {
                                         <span class="badge" style="background: #e30613;">Chưa đọc</span>
                                     }
@@ -1905,23 +2332,36 @@
                                         <span class="badge" style="background: #1565c0;">Đã đọc</span>
                                     }
                                 </td>
-                                <td style="text-align: right;">
-                                    <form asp-controller="Admin" asp-action="UpdateInquiryStatus" method="post" style="display:inline;">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="id" value="@inq.Id" />
-                                        @if (inq.Status == "Chưa đọc")
-                                        {
-                                            <button type="submit" name="status" value="Đã đọc" class="btn-action btn-edit">Đã đọc</button>
-                                        }
-                                        else if (inq.Status == "Đã đọc")
-                                        {
-                                            <button type="submit" name="status" value="Đã phản hồi" class="btn-action" style="background:#2e7d32;color:white;">Phản hồi</button>
-                                        }
-                                    </form>
-                                    <form asp-controller="Admin" asp-action="DeleteInquiry" asp-route-id="@inq.Id" method="post" style="display:inline;" onsubmit="return confirm('Bạn có chắc muốn xóa thư này?');">
-                                        @Html.AntiForgeryToken()
-                                        <button type="submit" class="btn-action btn-del">Xóa</button>
-                                    </form>
+                                <td style="text-align: right; white-space: nowrap;">
+                                    @if (!inq.IsDeleted && inq.Status != "Đã ẩn")
+                                    {
+                                        <form asp-controller="Admin" asp-action="UpdateInquiryStatus" method="post" style="display:inline;">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@inq.Id" />
+                                            @if (inq.Status == "Chưa đọc")
+                                            {
+                                                <button type="submit" name="status" value="Đã đọc" class="btn-action btn-edit">Đã đọc</button>
+                                            }
+                                            else if (inq.Status == "Đã đọc")
+                                            {
+                                                <button type="submit" name="status" value="Đã phản hồi" class="btn-action" style="background:#2e7d32;color:white;">Phản hồi</button>
+                                            }
+                                        </form>
+                                    }
+                                    @if (inq.IsDeleted || inq.Status == "Đã ẩn")
+                                    {
+                                        <form asp-controller="Admin" asp-action="RestoreInquiry" asp-route-id="@inq.Id" method="post" style="display:inline;">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn-action" style="background:#16a34a;color:white;">Khôi phục</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <form asp-controller="Admin" asp-action="DeleteInquiry" asp-route-id="@inq.Id" method="post" style="display:inline;" onsubmit="return confirm('Bạn có chắc muốn ẩn thư tiếp nhận này?');">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn-action btn-del">Ẩn</button>
+                                        </form>
+                                    }
                                 </td>
                             </tr>
                         }
@@ -1933,7 +2373,17 @@
         <!-- TAB 8: RENTALS -->
         <div id="tab-rentals" style="@(activeTab == "rentals" ? "" : "display: none;")">
             <div class="admin-title">
-                <span>Yêu Cầu Thuê Rạp & Vé Nhóm (@Model.Rentals.Count yêu cầu)</span>
+                <span>Yêu Cầu Thuê Rạp, Vé Đoàn & Sự Kiện (@Model.Rentals.Count yêu cầu)</span>
+            </div>
+
+            <!-- Filter Pills -->
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;">
+                <button type="button" class="btn-filter-rental active" onclick="filterRentals('all', this)" style="padding: 6px 14px; border-radius: 20px; border: 1px solid #ddd; background: #333; color: white; cursor: pointer; font-size: 0.8rem; font-weight: 600;">Tất cả (@Model.Rentals.Count)</button>
+                <button type="button" class="btn-filter-rental" onclick="filterRentals('new', this)" style="padding: 6px 14px; border-radius: 20px; border: 1px solid #ddd; background: white; color: #e65100; cursor: pointer; font-size: 0.8rem; font-weight: 600;">Mới tiếp nhận (@Model.Rentals.Count(r => (r.Status == "Mới tiếp nhận" || string.IsNullOrEmpty(r.Status)) && !r.IsDeleted))</button>
+                <button type="button" class="btn-filter-rental" onclick="filterRentals('big', this)" style="padding: 6px 14px; border-radius: 20px; border: 1px solid #ddd; background: white; color: #b71c1c; cursor: pointer; font-size: 0.8rem; font-weight: 600;">⭐ Đơn lớn VIP (@Model.Rentals.Count(r => (r.GuestCount >= 50 || !string.IsNullOrEmpty(r.CompanyName)) && !r.IsDeleted))</button>
+                <button type="button" class="btn-filter-rental" onclick="filterRentals('processing', this)" style="padding: 6px 14px; border-radius: 20px; border: 1px solid #ddd; background: white; color: #0284c7; cursor: pointer; font-size: 0.8rem; font-weight: 600;">Đang xử lý / Báo giá (@Model.Rentals.Count(r => (r.Status == "Đang tư vấn / Khảo sát rạp" || r.Status == "Đã gửi báo giá" || r.Status == "Chờ đặt cọc" || r.Status == "Đã liên hệ") && !r.IsDeleted))</button>
+                <button type="button" class="btn-filter-rental" onclick="filterRentals('done', this)" style="padding: 6px 14px; border-radius: 20px; border: 1px solid #ddd; background: white; color: #2e7d32; cursor: pointer; font-size: 0.8rem; font-weight: 600;">Đã chốt hợp đồng (@Model.Rentals.Count(r => (r.Status == "Đã chốt" || r.Status == "Đã chốt hợp đồng") && !r.IsDeleted))</button>
+                <button type="button" class="btn-filter-rental" onclick="filterRentals('hidden', this)" style="padding: 6px 14px; border-radius: 20px; border: 1px solid #ddd; background: white; color: #64748b; cursor: pointer; font-size: 0.8rem; font-weight: 600;">Đã ẩn (@Model.Rentals.Count(r => r.IsDeleted || r.Status == "Đã ẩn"))</button>
             </div>
             
             <div style="overflow-x: auto;">
@@ -1941,61 +2391,143 @@
                     <thead>
                         <tr>
                             <th>Khách Hàng / Đơn Vị</th>
-                            <th>Rạp Yêu Cầu</th>
-                            <th>Loại Dịch Vụ</th>
-                            <th>Số Lượng Khách</th>
-                            <th>Ngày Dự Kiến</th>
-                            <th>Trạng Thái</th>
-                            <th style="text-align: right;">Xử Lý</th>
+                            <th>Rạp Yêu Cầu & Sức Chứa</th>
+                            <th>Dịch Vụ & Dự Toán</th>
+                            <th>Khách & Thời Gian</th>
+                            <th>Tiến Độ Tiếp Nhận</th>
+                            <th style="text-align: right; min-width: 190px;">Xử Lý Chi Tiết</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var r in Model.Rentals)
                         {
-                            <tr>
+                            var cinemaObj = r.Cinema ?? Model.Cinemas.FirstOrDefault(c => c.Name == r.CinemaName);
+                            var halls = cinemaObj?.CinemaHalls?.ToList() ?? new List<Du_an_CGV.Models.CinemaHall>();
+                            var maxHallSeats = halls.Any() ? halls.Max(h => h.TotalSeats) : 96;
+                            var totalCinemaSeats = halls.Any() ? halls.Sum(h => h.TotalSeats) : 300;
+                            var isExceedMaxHall = r.GuestCount > maxHallSeats;
+                            var isExceedTotalCinema = r.GuestCount > totalCinemaSeats;
+                            var isBigOrder = r.GuestCount >= 50 || !string.IsNullOrEmpty(r.CompanyName) || (r.ServiceType != null && r.ServiceType.Contains("Thuê trọn rạp"));
+                            var isExpiredDate = r.ExpectedDate.HasValue && r.ExpectedDate.Value.Date < DateTime.Today;
+                            var isHidden = r.IsDeleted || r.Status == "Đã ẩn";
+
+                            var categoryTag = isHidden ? "hidden" : (r.Status == "Đã chốt" || r.Status == "Đã chốt hợp đồng" ? "done" : (isBigOrder ? "big" : (r.Status == "Mới tiếp nhận" || string.IsNullOrEmpty(r.Status) ? "new" : "processing")));
+
+                            <tr class="rental-row" data-category="@categoryTag" style="@(isHidden ? "opacity: 0.6; background: #fafafa;" : "")">
                                 <td>
-                                    <strong>@r.FullName</strong> @if (!string.IsNullOrEmpty(r.CompanyName)) { <small>(@r.CompanyName)</small> }<br>
-                                    <small style="color: #666;">@r.PhoneNumber · @r.Email</small>
+                                    <strong>@r.FullName</strong>
+                                    @if (!string.IsNullOrEmpty(r.CompanyName))
+                                    {
+                                        <div style="font-weight: 600; color: #1e3a8a; font-size: 0.8rem;">🏢 @r.CompanyName</div>
+                                    }
+                                    <small style="color: #666; display: block; margin-top: 2px;">📞 @r.PhoneNumber · ✉️ @r.Email</small>
+                                    @if (isBigOrder)
+                                    {
+                                        <div style="margin-top: 4px;">
+                                            <span class="badge" style="background: linear-gradient(135deg, #b71c1c, #e53935); color: #fff; font-weight: 700; font-size: 0.68rem; padding: 2px 7px; border-radius: 3px; display: inline-flex; align-items: center; gap: 4px;">
+                                                ⭐ Đơn quy mô lớn (VIP)
+                                            </span>
+                                        </div>
+                                    }
                                 </td>
-                                <td><strong>@r.CinemaName</strong></td>
-                                <td><span class="badge" style="background: #5d4037;">@r.ServiceType</span></td>
-                                <td><strong>@r.GuestCount</strong> người</td>
-                                <td><small>@(r.ExpectedDate?.ToString("dd/MM/yyyy") ?? "Chưa định ngày")</small></td>
                                 <td>
-                                    @if (r.Status == "Mới tiếp nhận")
+                                    <strong>@(r.CinemaName ?? (r.Cinema?.Name ?? "CGV Cinema"))</strong>
+                                    <div style="font-size: 0.76rem; color: #555; margin-top: 3px;">
+                                        Phòng max: <strong>@maxHallSeats</strong> ghế · Toàn rạp: <strong>@totalCinemaSeats</strong> ghế
+                                    </div>
+                                    @if (isExceedTotalCinema)
                                     {
-                                        <span class="badge" style="background: #e65100;">Mới tiếp nhận</span>
+                                        <div style="margin-top: 4px;">
+                                            <span class="badge" style="background: #dc2626; color: white; font-size: 0.68rem; padding: 2px 6px;">🚨 Vượt toàn rạp (@totalCinemaSeats ghế)</span>
+                                            <div style="font-size: 0.72rem; color: #b91c1c; margin-top: 2px; font-weight: 600;">Cần đổi sang cụm rạp lớn hơn hoặc chia ca</div>
+                                        </div>
                                     }
-                                    else if (r.Status == "Đã liên hệ")
+                                    else if (isExceedMaxHall)
                                     {
-                                        <span class="badge" style="background: #1565c0;">Đã liên hệ</span>
-                                    }
-                                    else if (r.Status == "Đã chốt")
-                                    {
-                                        <span class="badge" style="background: #2e7d32;">Đã chốt</span>
+                                        var suggestedRooms = Math.Ceiling((double)r.GuestCount / maxHallSeats);
+                                        <div style="margin-top: 4px;">
+                                            <span class="badge" style="background: #ea580c; color: white; font-size: 0.68rem; padding: 2px 6px;">⚠️ Vượt phòng max (@maxHallSeats ghế)</span>
+                                            <div style="font-size: 0.72rem; color: #c2410c; margin-top: 2px; font-weight: 600;">💡 Gợi ý: Chia làm @suggestedRooms phòng song song</div>
+                                        </div>
                                     }
                                     else
                                     {
-                                        <span class="badge" style="background: #888;">Đã hủy</span>
+                                        <div style="margin-top: 4px;">
+                                            <span class="badge" style="background: #ecfdf5; color: #047857; font-size: 0.68rem; padding: 2px 6px;">✅ Phù hợp 1 phòng</span>
+                                        </div>
                                     }
                                 </td>
-                                <td style="text-align: right;">
-                                    <form asp-controller="Admin" asp-action="UpdateRentalStatus" method="post" style="display:inline;">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="id" value="@r.Id" />
-                                        @if (r.Status == "Mới tiếp nhận")
-                                        {
-                                            <button type="submit" name="status" value="Đã liên hệ" class="btn-action btn-edit">Liên hệ</button>
-                                        }
-                                        else if (r.Status == "Đã liên hệ")
-                                        {
-                                            <button type="submit" name="status" value="Đã chốt" class="btn-action" style="background:#2e7d32;color:white;">Chốt đơn</button>
-                                        }
-                                    </form>
-                                    <form asp-controller="Admin" asp-action="DeleteRental" asp-route-id="@r.Id" method="post" style="display:inline;" onsubmit="return confirm('Bạn có chắc muốn xóa yêu cầu này?');">
-                                        @Html.AntiForgeryToken()
-                                        <button type="submit" class="btn-action btn-del">Xóa</button>
-                                    </form>
+                                <td>
+                                    <span class="badge" style="background: #5d4037; font-size: 0.75rem;">@r.ServiceType</span>
+                                    <div style="margin-top: 4px; font-size: 0.8rem;">
+                                        Dự toán: <strong style="color: #15803d;">@(r.EstimatedBudget.HasValue ? r.EstimatedBudget.Value.ToString("N0") + " đ" : "Chưa lập")</strong>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(r.AdminNotes))
+                                    {
+                                        <div style="margin-top: 4px; font-size: 0.72rem; color: #0369a1; background: #f0f9ff; padding: 3px 6px; border-radius: 3px; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="@r.AdminNotes">
+                                            📝 @r.AdminNotes
+                                        </div>
+                                    }
+                                </td>
+                                <td>
+                                    <strong style="font-size: 0.95rem; color: #111;">@r.GuestCount</strong> người
+                                    <div style="font-size: 0.76rem; color: #666; margin-top: 2px;">
+                                        Ngày: <strong>@(r.ExpectedDate?.ToString("dd/MM/yyyy") ?? "Chưa định ngày")</strong>
+                                    </div>
+                                    @if (isExpiredDate)
+                                    {
+                                        <span class="badge" style="background: #f1f5f9; color: #64748b; font-size: 0.68rem; padding: 2px 5px; margin-top: 3px; display: inline-block;">⏱️ Đã qua ngày</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (isHidden)
+                                    {
+                                        <span class="badge" style="background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca;">🔴 Đã ẩn</span>
+                                    }
+                                    else if (r.Status == "Mới tiếp nhận" || string.IsNullOrEmpty(r.Status))
+                                    {
+                                        <span class="badge" style="background: #e65100;">Mới tiếp nhận</span>
+                                    }
+                                    else if (r.Status == "Đang tư vấn / Khảo sát rạp")
+                                    {
+                                        <span class="badge" style="background: #0284c7;">Đang tư vấn</span>
+                                    }
+                                    else if (r.Status == "Đã gửi báo giá")
+                                    {
+                                        <span class="badge" style="background: #7c3aed;">Đã gửi báo giá</span>
+                                    }
+                                    else if (r.Status == "Chờ đặt cọc")
+                                    {
+                                        <span class="badge" style="background: #d97706;">Chờ đặt cọc</span>
+                                    }
+                                    else if (r.Status == "Đã chốt hợp đồng" || r.Status == "Đã chốt")
+                                    {
+                                        <span class="badge" style="background: #2e7d32;">Đã chốt hợp đồng</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge" style="background: #64748b;">@r.Status</span>
+                                    }
+                                </td>
+                                <td style="text-align: right; white-space: nowrap;">
+                                    <button type="button" class="btn-action" style="background: #0284c7; color: white;" 
+                                            onclick="openRentalDetailModal(@r.Id, '@Html.Raw((r.FullName ?? "").Replace("'", "\\'"))', '@Html.Raw((r.CompanyName ?? "").Replace("'", "\\'"))', '@r.PhoneNumber', '@r.Email', '@Html.Raw((r.CinemaName ?? (r.Cinema?.Name ?? "")).Replace("'", "\\'"))', '@Html.Raw((r.ServiceType ?? "").Replace("'", "\\'"))', @r.GuestCount, '@(r.ExpectedDate?.ToString("yyyy-MM-dd") ?? "")', '@Html.Raw((r.Status ?? "Mới tiếp nhận").Replace("'", "\\'"))', @(r.EstimatedBudget ?? 0), '@Html.Raw((r.Notes ?? "").Replace("'", "\\'").Replace("\r", "").Replace("\n", " "))', '@Html.Raw((r.AdminNotes ?? "").Replace("'", "\\'").Replace("\r", "").Replace("\n", " "))', @maxHallSeats, @totalCinemaSeats)">
+                                        📋 Chi tiết & Báo giá
+                                    </button>
+                                    @if (isHidden)
+                                    {
+                                        <form asp-controller="Admin" asp-action="RestoreRental" asp-route-id="@r.Id" method="post" style="display:inline;">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn-action" style="background:#16a34a;color:white;" title="Khôi phục yêu cầu này">Khôi phục</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <form asp-controller="Admin" asp-action="DeleteRental" asp-route-id="@r.Id" method="post" style="display:inline;" onsubmit="return confirm('Bạn có chắc muốn ẩn đơn tiếp nhận của @r.FullName? Đơn vẫn được lưu trữ và có thể khôi phục.');">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn-action btn-del">Ẩn</button>
+                                        </form>
+                                    }
                                 </td>
                             </tr>
                         }
@@ -2612,9 +3144,13 @@
                     <label>Định Dạng Chiếu *</label>
                     <select id="showtime-format" name="Format" class="form-control">
                         <option value="2D">2D Phụ Đề</option>
+                        <option value="2D DIGITAL">2D Digital</option>
                         <option value="2D Lồng Tiếng">2D Lồng Tiếng</option>
                         <option value="3D">3D Digital</option>
-                        <option value="IMAX">IMAX Laser</option>
+                        <option value="3D Atmos">3D Atmos</option>
+                        <option value="2D Atmos">2D Atmos</option>
+                        <option value="IMAX">IMAX</option>
+                        <option value="IMAX Laser">IMAX Laser</option>
                         <option value="4DX">4DX</option>
                         <option value="L'Amour">L'Amour Giường Nằm</option>
                     </select>
@@ -2809,7 +3345,127 @@
     </div>
 </div>
 
+<!-- MODAL: CHI TIẾT & BÁO GIÁ SỰ KIỆN / THUÊ RẠP -->
+<div id="modal-rental-detail" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="max-width: 800px; width: 95%; max-height: 90vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e30613; padding-bottom: 12px; margin-bottom: 16px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <h3 style="margin: 0; color: #111; font-size: 1.25rem;">📋 Chi Tiết & Báo Giá Sự Kiện / Thuê Rạp</h3>
+                <span id="rental-modal-badge-big" class="badge" style="background: linear-gradient(135deg, #b71c1c, #e53935); color: #fff; font-weight: 700; font-size: 0.72rem; display: none;">⭐ Quy mô lớn (VIP)</span>
+            </div>
+            <button type="button" onclick="closeModal('modal-rental-detail')" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #666;">&times;</button>
+        </div>
+
+        <form asp-controller="Admin" asp-action="UpdateRentalDetails" method="post" id="form-rental-details">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" id="rental-modal-id" />
+
+            <!-- Grid 2 Cột: Thông tin khách & Khảo sát năng lực rạp -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                <!-- Cột 1: Thông tin khách -->
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 14px;">
+                    <div style="font-weight: 700; color: #1e293b; margin-bottom: 10px; font-size: 0.9rem; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px;">
+                        👤 Khách Hàng / Đơn Vị Đăng Ký
+                    </div>
+                    <div style="font-size: 0.85rem; line-height: 1.7;">
+                        <div>Họ tên: <strong id="rental-modal-name"></strong></div>
+                        <div>Đơn vị / Công ty: <strong id="rental-modal-company" style="color: #1e3a8a;"></strong></div>
+                        <div>Số điện thoại: <strong id="rental-modal-phone"></strong></div>
+                        <div>Email: <strong id="rental-modal-email"></strong></div>
+                        <div>Gói dịch vụ: <span class="badge" style="background: #5d4037;" id="rental-modal-service"></span></div>
+                        <div>Số lượng khách: <strong id="rental-modal-guestcount" style="color: #e11d48; font-size: 1rem;"></strong> người</div>
+                        <div>Ngày dự kiến: <strong id="rental-modal-date"></strong></div>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <label style="font-size: 0.78rem; font-weight: 600; color: #475569;">Ghi chú từ khách hàng:</label>
+                        <div id="rental-modal-notes" style="background: #fff; border: 1px solid #e2e8f0; border-radius: 4px; padding: 8px; font-size: 0.8rem; color: #334155; min-height: 48px; max-height: 90px; overflow-y: auto;"></div>
+                    </div>
+                </div>
+
+                <!-- Cột 2: Khảo sát năng lực rạp & Cảnh báo sức chứa -->
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 14px;">
+                    <div style="font-weight: 700; color: #1e293b; margin-bottom: 10px; font-size: 0.9rem; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px;">
+                        🏛️ Năng Lực Sức Chứa Cụm Rạp
+                    </div>
+                    <div style="font-size: 0.85rem; line-height: 1.7;">
+                        <div>Cụm rạp: <strong id="rental-modal-cinema" style="color: #e30613;"></strong></div>
+                        <div>Phòng lớn nhất: <strong id="rental-modal-maxhall"></strong> ghế</div>
+                        <div>Tổng sức chứa cụm rạp: <strong id="rental-modal-totalcinema"></strong> ghế</div>
+                    </div>
+                    <div id="rental-modal-capacity-status" style="margin-top: 10px;"></div>
+                </div>
+            </div>
+
+            <!-- Bảng Tính Dự Toán Nhanh Sự Kiện (Quotation Calculator) -->
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 14px; margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-weight: 700; color: #1e40af; font-size: 0.9rem;">
+                        💰 Bảng Tính Dự Toán Nhanh Cho Sự Kiện / Vé Đoàn
+                    </span>
+                    <button type="button" onclick="applyRentalCalcToBudget()" style="background: #2563eb; color: white; border: none; padding: 5px 12px; border-radius: 4px; font-size: 0.78rem; font-weight: 600; cursor: pointer;">
+                        ✨ Áp dụng vào dự toán đơn
+                    </button>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 0.8rem;">
+                    <div style="background: #fff; padding: 8px; border-radius: 4px; border: 1px solid #dbeafe;">
+                        <label style="color: #1e3a8a; font-weight: 600; display: block;">Vé đoàn (80k/vé):</label>
+                        <div id="rental-calc-tickets" style="font-weight: 700; color: #111; margin-top: 2px;">0 đ</div>
+                    </div>
+                    <div style="background: #fff; padding: 8px; border-radius: 4px; border: 1px solid #dbeafe;">
+                        <label style="color: #1e3a8a; font-weight: 600; display: block;">Combo bắp nước (55k/combo):</label>
+                        <div id="rental-calc-combos" style="font-weight: 700; color: #111; margin-top: 2px;">0 đ</div>
+                    </div>
+                    <div style="background: #fff; padding: 8px; border-radius: 4px; border: 1px solid #dbeafe;">
+                        <label style="color: #1e3a8a; font-weight: 600; display: block;">Phí kỹ thuật / màn chiếu:</label>
+                        <div id="rental-calc-tech" style="font-weight: 700; color: #111; margin-top: 2px;">1,000,000 đ</div>
+                    </div>
+                </div>
+                <div style="border-top: 1px dashed #93c5fd; margin-top: 10px; padding-top: 8px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 0.82rem; color: #1e40af; font-weight: 600;">Tổng dự toán ước tính trọn gói:</span>
+                    <span id="rental-calc-total" style="font-size: 1.15rem; font-weight: 700; color: #dc2626;">0 đ</span>
+                </div>
+            </div>
+
+            <!-- Cập nhật Tiến Trình & Dự Toán & Ghi Chú QTV -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                <div>
+                    <label style="display: block; font-weight: 700; font-size: 0.85rem; margin-bottom: 6px; color: #111;">
+                        📌 Tiến Độ Tiếp Nhận & Xử Lý:
+                    </label>
+                    <select name="status" id="rental-modal-status-select" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.85rem; font-weight: 600;">
+                        <option value="Mới tiếp nhận">🟠 Mới tiếp nhận</option>
+                        <option value="Đang tư vấn / Khảo sát rạp">🔵 Đang tư vấn / Khảo sát rạp</option>
+                        <option value="Đã gửi báo giá">🟣 Đã gửi báo giá</option>
+                        <option value="Chờ đặt cọc">🟡 Chờ đặt cọc</option>
+                        <option value="Đã chốt hợp đồng">🟢 Đã chốt hợp đồng</option>
+                        <option value="Đã ẩn">🔴 Đã ẩn (Hủy / Không tiếp tục)</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; font-weight: 700; font-size: 0.85rem; margin-bottom: 6px; color: #111;">
+                        💵 Dự Toán Kinh Phí Thỏa Thuận (VNĐ):
+                    </label>
+                    <input type="number" step="10000" name="estimatedBudget" id="rental-modal-budget-input" placeholder="Ví dụ: 8500000" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.85rem;" />
+                </div>
+            </div>
+
+            <div style="margin-bottom: 18px;">
+                <label style="display: block; font-weight: 700; font-size: 0.85rem; margin-bottom: 6px; color: #111;">
+                    📝 Nhật Ký Làm Việc / Ghi Chú Nội Bộ Của QTV (Tiền cọc, điều phối phòng, người phụ trách):
+                </label>
+                <textarea name="adminNotes" id="rental-modal-adminnotes" rows="3" placeholder="Ghi chú chi tiết trao đổi với khách, thỏa thuận cọc, bố trí phòng chiếu..." style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.85rem; font-family: inherit;"></textarea>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #e2e8f0; padding-top: 14px;">
+                <button type="button" class="btn-action" style="background: #94a3b8; color: white; padding: 8px 18px;" onclick="closeModal('modal-rental-detail')">Đóng</button>
+                <button type="submit" class="btn-action" style="background: #e30613; color: white; padding: 8px 22px; font-weight: 700;">💾 Lưu Cập Nhật Tiếp Nhận</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 @section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
     // @@ts-nocheck
     // Tab switching
@@ -2822,7 +3478,7 @@
             if (navBtn) navBtn.classList.add('active');
         }
         
-        ['dashboard', 'movies', 'cinemas', 'showtimes', 'food', 'promos', 'bookings', 'transactions', 'actionlogs', 'inquiries', 'rentals', 'membertiers', 'seatholds'].forEach(t => {
+        ['dashboard', 'reports', 'movies', 'cinemas', 'showtimes', 'food', 'promos', 'bookings', 'transactions', 'actionlogs', 'inquiries', 'rentals', 'membertiers', 'seatholds'].forEach(t => {
             const elTab = document.getElementById('tab-' + t);
             if (elTab) elTab.style.display = 'none';
         });
@@ -2830,6 +3486,10 @@
         const target = document.getElementById('tab-' + tabName);
         if (target) {
             target.style.display = 'block';
+        }
+
+        if (tabName === 'reports') {
+            loadRevenueReport();
         }
     }
 
@@ -3105,18 +3765,29 @@
                 let html = '';
                 data.halls.forEach(h => {
                     const typeColor = h.hallType.includes('IMAX') ? '#b71c1c' : (h.hallType.includes('L\'Amour') ? '#ad1457' : (h.hallType.includes('3D') ? '#0288d1' : '#455a64'));
-                    html += `<tr>
-                        <td><strong>${h.name}</strong></td>
+                    html += `<tr style="${h.isDeleted ? 'opacity:0.65;background:#fafafa;' : ''}">
+                        <td>
+                            <strong>${h.name}</strong>
+                            ${h.isDeleted ? '<span class="badge" style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;font-size:0.68rem;margin-left:4px;">🔴 Đã ẩn</span>' : ''}
+                        </td>
                         <td><span class="badge" style="background:${typeColor};">${h.hallType}</span></td>
                         <td><strong>${h.totalSeats}</strong> ghế <small style="color:#666;">(${h.seatsCount} ghế DB)</small></td>
                         <td><small>${h.showtimesCount} suất chiếu</small></td>
                         <td style="text-align:right;white-space:nowrap;">
                             <button type="button" class="btn-action btn-edit" onclick="openEditHallModal(${h.id})">Sửa</button>
-                            <form action="@Url.Action("DeleteCinemaHall", "Admin")" method="post" style="display:inline;" onsubmit="return confirm('Bạn có chắc muốn xóa phòng ${h.name}? Toàn bộ ghế và suất chiếu của phòng sẽ bị xóa!');">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="id" value="${h.id}" />
-                                <button type="submit" class="btn-action btn-del">Xóa</button>
-                            </form>
+                            ${h.isDeleted ? `
+                                <form action="@Url.Action("RestoreCinemaHall", "Admin")" method="post" style="display:inline;">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="${h.id}" />
+                                    <button type="submit" class="btn-action" style="background:#16a34a;color:white;">Hiện lại</button>
+                                </form>
+                            ` : `
+                                <form action="@Url.Action("DeleteCinemaHall", "Admin")" method="post" style="display:inline;" onsubmit="return confirm('Bạn có chắc muốn ẩn phòng ${h.name}? Suất chiếu và dữ liệu ghế vẫn được lưu lại.');">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="${h.id}" />
+                                    <button type="submit" class="btn-action btn-del">Ẩn</button>
+                                </form>
+                            `}
                         </td>
                     </tr>`;
                 });
@@ -3333,8 +4004,27 @@
         const submitBtn = document.getElementById('showtime-submit-btn');
 
         if (!movieId || !hallId || !startTime) {
-            if (box) box.style.display = 'none';
-            if (submitBtn) submitBtn.disabled = false;
+            if (box) {
+                box.style.display = 'block';
+                box.style.background = '#fff3cd';
+                box.style.border = '1px solid #ffeeba';
+                box.style.color = '#856404';
+                box.innerHTML = '⚠️ Vui lòng chọn đầy đủ Phim, Phòng chiếu và Thời gian bắt đầu!';
+            }
+            if (submitBtn) submitBtn.disabled = true;
+            return;
+        }
+
+        const selectedDate = new Date(startTime);
+        if (isNaN(selectedDate.getTime()) || selectedDate.getFullYear() < 2000) {
+            if (box) {
+                box.style.display = 'block';
+                box.style.background = '#ffebee';
+                box.style.border = '1px solid #ef9a9a';
+                box.style.color = '#c62828';
+                box.innerHTML = '<strong>⚠️ THỜI GIAN KHÔNG HỢP LỆ:</strong> Vui lòng chọn đầy đủ ngày và giờ bắt đầu chiếu.';
+            }
+            if (submitBtn) submitBtn.disabled = true;
             return;
         }
 
@@ -3402,7 +4092,24 @@
             document.getElementById('showtime-movie').value = data.movieId;
             document.getElementById('showtime-hall').value = data.cinemaHallId;
             document.getElementById('showtime-start').value = data.startTime;
-            document.getElementById('showtime-format').value = data.format;
+
+            // Khớp định dạng chiếu hoặc tự động thêm nếu chưa có trong danh sách
+            const formatSelect = document.getElementById('showtime-format');
+            if (formatSelect) {
+                let found = false;
+                for (let i = 0; i < formatSelect.options.length; i++) {
+                    if (formatSelect.options[i].value.toLowerCase() === (data.format || '').toLowerCase()) {
+                        formatSelect.selectedIndex = i;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found && data.format) {
+                    const opt = new Option(data.format, data.format, true, true);
+                    formatSelect.add(opt);
+                }
+            }
+
             document.getElementById('showtime-price').value = data.price;
 
             const conflictBox = document.getElementById('showtime-conflict-box');
@@ -3795,5 +4502,702 @@
     function printTransactionsTable() {
         window.print();
     }
+
+    // ==========================================
+    // RENTAL / EVENT MANAGEMENT & QUOTATION JS
+    // ==========================================
+    let currentRentalCalculatedBudget = 0;
+
+    function filterRentals(category, btn) {
+        document.querySelectorAll('.btn-filter-rental').forEach(b => {
+            b.style.background = 'white';
+            b.style.color = '#333';
+            b.classList.remove('active');
+        });
+        if (btn) {
+            btn.style.background = '#333';
+            btn.style.color = 'white';
+            btn.classList.add('active');
+        }
+        document.querySelectorAll('.rental-row').forEach(row => {
+            const cat = row.getAttribute('data-category');
+            if (category === 'all' || cat === category) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+    function openRentalDetailModal(id, name, company, phone, email, cinema, service, guestCount, date, status, budget, notes, adminNotes, maxHall, totalCinema) {
+        document.getElementById('rental-modal-id').value = id;
+        document.getElementById('rental-modal-name').textContent = name || 'Chưa cung cấp';
+        document.getElementById('rental-modal-company').textContent = company ? company : '(Khách hàng cá nhân)';
+        document.getElementById('rental-modal-phone').textContent = phone || 'Chưa có SĐT';
+        document.getElementById('rental-modal-email').textContent = email || 'Chưa có Email';
+        document.getElementById('rental-modal-service').textContent = service || 'Thuê rạp / Vé nhóm';
+        document.getElementById('rental-modal-guestcount').textContent = (guestCount || 0).toLocaleString('vi-VN');
+        document.getElementById('rental-modal-date').textContent = date ? new Date(date).toLocaleDateString('vi-VN') : 'Chưa định ngày';
+        document.getElementById('rental-modal-notes').textContent = notes || 'Không có ghi chú thêm từ khách hàng.';
+
+        // Cinema capacity status
+        document.getElementById('rental-modal-cinema').textContent = cinema || 'CGV Cinema';
+        document.getElementById('rental-modal-maxhall').textContent = (maxHall || 96).toLocaleString('vi-VN');
+        document.getElementById('rental-modal-totalcinema').textContent = (totalCinema || 300).toLocaleString('vi-VN');
+
+        const isBig = (guestCount >= 50) || Boolean(company && company.trim());
+        const bigBadge = document.getElementById('rental-modal-badge-big');
+        if (bigBadge) {
+            bigBadge.style.display = isBig ? 'inline-flex' : 'none';
+        }
+
+        const capStatusBox = document.getElementById('rental-modal-capacity-status');
+        if (guestCount > totalCinema) {
+            capStatusBox.innerHTML = `
+                <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 4px; padding: 8px 10px; font-size: 0.78rem; color: #991b1b;">
+                    <div style="font-weight: 700;">🚨 Vượt quá tổng sức chứa cả cụm rạp (${totalCinema} ghế)</div>
+                    <div style="margin-top: 2px;">Cần tư vấn khách đổi sang cụm rạp có quy mô lớn hơn hoặc chia ca tổ chức.</div>
+                </div>`;
+        } else if (guestCount > maxHall) {
+            const rooms = Math.ceil(guestCount / maxHall);
+            capStatusBox.innerHTML = `
+                <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 4px; padding: 8px 10px; font-size: 0.78rem; color: #9a3412;">
+                    <div style="font-weight: 700;">⚠️ Vượt sức chứa phòng đơn lớn nhất (${maxHall} ghế)</div>
+                    <div style="margin-top: 2px;">Đề xuất: Điều phối phân bổ <strong>${rooms} phòng chiếu song song</strong> hoặc tổ chức 2 ca.</div>
+                </div>`;
+        } else {
+            capStatusBox.innerHTML = `
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; padding: 8px 10px; font-size: 0.78rem; color: #166534;">
+                    <div style="font-weight: 700;">✅ Phù hợp sức chứa phòng đơn</div>
+                    <div style="margin-top: 2px;">Phòng lớn nhất (${maxHall} ghế) đáp ứng tốt quy mô ${guestCount} khách.</div>
+                </div>`;
+        }
+
+        // Quotation Calculator
+        const ticketRate = 80000;
+        const comboRate = 55000;
+        const techFee = (service && service.includes('Thuê trọn rạp')) ? 2000000 : 1000000;
+        const totalTickets = (guestCount || 0) * ticketRate;
+        const totalCombos = (guestCount || 0) * comboRate;
+        const calcTotal = totalTickets + totalCombos + techFee;
+        currentRentalCalculatedBudget = calcTotal;
+
+        document.getElementById('rental-calc-tickets').textContent = totalTickets.toLocaleString('vi-VN') + ' đ';
+        document.getElementById('rental-calc-combos').textContent = totalCombos.toLocaleString('vi-VN') + ' đ';
+        document.getElementById('rental-calc-tech').textContent = techFee.toLocaleString('vi-VN') + ' đ';
+        document.getElementById('rental-calc-total').textContent = calcTotal.toLocaleString('vi-VN') + ' đ';
+
+        // Current status & budget & notes
+        const statusSelect = document.getElementById('rental-modal-status-select');
+        if (statusSelect) {
+            statusSelect.value = status || 'Mới tiếp nhận';
+            if (!statusSelect.value) statusSelect.value = 'Mới tiếp nhận';
+        }
+
+        const budgetInput = document.getElementById('rental-modal-budget-input');
+        if (budgetInput) {
+            budgetInput.value = budget > 0 ? budget : '';
+        }
+
+        const adminNotesInput = document.getElementById('rental-modal-adminnotes');
+        if (adminNotesInput) {
+            adminNotesInput.value = adminNotes || '';
+        }
+
+        openModal('modal-rental-detail');
+    }
+
+    function applyRentalCalcToBudget() {
+        const budgetInput = document.getElementById('rental-modal-budget-input');
+        if (budgetInput && currentRentalCalculatedBudget > 0) {
+            budgetInput.value = currentRentalCalculatedBudget;
+            budgetInput.focus();
+        }
+    }
+
+    // ==========================================================
+    // THỐNG KÊ DOANH THU & BÁO CÁO (REVENUE & REPORTING)
+    // ==========================================================
+    let repChartTimeline = null;
+    let repChartMix = null;
+    let repChartMovies = null;
+    let repChartCinemas = null;
+    let repReportLoadedOnce = false;
+
+    // Thiết lập phím tắt khoảng thời gian
+    function setReportDatePreset(preset, btn) {
+        document.querySelectorAll('.rep-preset-btn').forEach(b => {
+            b.classList.remove('active');
+            b.style.background = 'white';
+            b.style.color = '#334155';
+            b.style.border = '1px solid #cbd5e1';
+            b.style.fontWeight = '600';
+        });
+        if (btn) {
+            btn.classList.add('active');
+            btn.style.background = '#e30613';
+            btn.style.color = 'white';
+            btn.style.border = '1px solid #e30613';
+            btn.style.fontWeight = '700';
+        }
+
+        const today = new Date();
+        const formatDateStr = (d) => {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        const fromInput = document.getElementById('rep-from-date');
+        const toInput = document.getElementById('rep-to-date');
+        if (!fromInput || !toInput) return;
+
+        toInput.value = formatDateStr(today);
+
+        if (preset === 'today') {
+            fromInput.value = formatDateStr(today);
+        } else if (preset === '7days') {
+            const d7 = new Date();
+            d7.setDate(today.getDate() - 6);
+            fromInput.value = formatDateStr(d7);
+        } else if (preset === '30days') {
+            const d30 = new Date();
+            d30.setDate(today.getDate() - 29);
+            fromInput.value = formatDateStr(d30);
+        } else if (preset === 'thismonth') {
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            fromInput.value = formatDateStr(firstDay);
+        } else if (preset === 'alltime') {
+            fromInput.value = '2024-01-01';
+        }
+
+        loadRevenueReport();
+    }
+
+    function resetReportFilters() {
+        const cinemaSelect = document.getElementById('rep-cinema-filter');
+        if (cinemaSelect) cinemaSelect.value = '';
+        const movieSelect = document.getElementById('rep-movie-filter');
+        if (movieSelect) movieSelect.value = '';
+        
+        const preset30 = document.querySelectorAll('.rep-preset-btn')[2];
+        setReportDatePreset('30days', preset30);
+    }
+
+    // Chuyển tab bảng con trong Báo cáo
+    function switchReportSubTable(type, btn) {
+        document.querySelectorAll('.rep-table-tab').forEach(b => {
+            b.classList.remove('active');
+            b.style.background = 'white';
+            b.style.color = '#334155';
+            b.style.border = '1px solid #cbd5e1';
+            b.style.fontWeight = '600';
+        });
+        if (btn) {
+            btn.classList.add('active');
+            btn.style.background = '#e30613';
+            btn.style.color = 'white';
+            btn.style.border = 'none';
+            btn.style.fontWeight = '700';
+        }
+
+        ['movie', 'cinema', 'payment', 'details'].forEach(t => {
+            const el = document.getElementById('rep-subtable-' + t);
+            if (el) el.style.display = (t === type ? 'block' : 'none');
+        });
+    }
+
+    // Xuất Excel CSV
+    function exportRevenueReport() {
+        const fromDate = document.getElementById('rep-from-date')?.value || '';
+        const toDate = document.getElementById('rep-to-date')?.value || '';
+        const cinemaId = document.getElementById('rep-cinema-filter')?.value || '';
+        const movieId = document.getElementById('rep-movie-filter')?.value || '';
+
+        const url = `@Url.Action("ExportRevenueReport", "Admin")?fromDate=${encodeURIComponent(fromDate)}&toDate=${encodeURIComponent(toDate)}&cinemaId=${encodeURIComponent(cinemaId)}&movieId=${encodeURIComponent(movieId)}`;
+        window.location.href = url;
+    }
+
+    // In báo cáo
+    function printRevenueReport() {
+        document.body.classList.add('printing-revenue-report');
+        window.print();
+        setTimeout(() => {
+            document.body.classList.remove('printing-revenue-report');
+        }, 800);
+    }
+
+    // Tải dữ liệu báo cáo qua AJAX
+    async function loadRevenueReport() {
+        const loadingIndicator = document.getElementById('rep-loading-indicator');
+        if (loadingIndicator) loadingIndicator.style.display = 'inline-flex';
+
+        const fromDate = document.getElementById('rep-from-date')?.value || '';
+        const toDate = document.getElementById('rep-to-date')?.value || '';
+        const cinemaId = document.getElementById('rep-cinema-filter')?.value || '';
+        const movieId = document.getElementById('rep-movie-filter')?.value || '';
+
+        try {
+            const url = `@Url.Action("GetRevenueReportData", "Admin")?fromDate=${encodeURIComponent(fromDate)}&toDate=${encodeURIComponent(toDate)}&cinemaId=${encodeURIComponent(cinemaId)}&movieId=${encodeURIComponent(movieId)}`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('Không thể tải dữ liệu báo cáo');
+            const data = await res.json();
+
+            renderRevenueReport(data);
+            repReportLoadedOnce = true;
+        } catch (e) {
+            console.error('Lỗi khi tải báo cáo doanh thu:', e);
+        } finally {
+            if (loadingIndicator) loadingIndicator.style.display = 'none';
+        }
+    }
+
+    // Hiển thị dữ liệu lên giao diện
+    function renderRevenueReport(data) {
+        const emptyState = document.getElementById('rep-empty-state');
+        const chartsSection = document.getElementById('rep-charts-section');
+        const tablesSection = document.getElementById('rep-tables-section');
+
+        // 3a. Luồng ngoại lệ: Không có dữ liệu
+        if (!data || !data.hasData) {
+            if (emptyState) emptyState.style.display = 'block';
+            if (chartsSection) chartsSection.style.display = 'none';
+            if (tablesSection) tablesSection.style.display = 'none';
+
+            // Reset KPI cards
+            document.getElementById('rep-kpi-total-rev').textContent = '0 đ';
+            document.getElementById('rep-kpi-ticket-rev').textContent = '0 đ';
+            document.getElementById('rep-kpi-ticket-share').textContent = 'Chiếm 0% tổng thu';
+            document.getElementById('rep-kpi-food-rev').textContent = '0 đ';
+            document.getElementById('rep-kpi-food-share').textContent = 'Chiếm 0% tổng thu';
+            document.getElementById('rep-kpi-tickets-sold').textContent = '0 vé';
+            document.getElementById('rep-kpi-orders-count').textContent = '0 đơn hoàn tất';
+            document.getElementById('rep-kpi-occupancy').textContent = '0%';
+            document.getElementById('rep-kpi-avg-order').textContent = '0 đ';
+
+            destroyAllReportCharts();
+            return;
+        }
+
+        if (emptyState) emptyState.style.display = 'none';
+        if (chartsSection) chartsSection.style.display = 'block';
+        if (tablesSection) tablesSection.style.display = 'block';
+
+        const sum = data.summary;
+        const totalRev = sum.totalRevenue || 0;
+        const ticketRev = sum.totalTicketRevenue || 0;
+        const foodRev = sum.totalFoodRevenue || 0;
+        const ticketPercent = totalRev > 0 ? Math.round((ticketRev / totalRev) * 100) : 0;
+        const foodPercent = totalRev > 0 ? Math.round((foodRev / totalRev) * 100) : 0;
+
+        // Cập nhật thẻ KPI
+        document.getElementById('rep-kpi-total-rev').textContent = totalRev.toLocaleString('vi-VN') + ' đ';
+        document.getElementById('rep-kpi-ticket-rev').textContent = ticketRev.toLocaleString('vi-VN') + ' đ';
+        document.getElementById('rep-kpi-ticket-share').textContent = `Chiếm ${ticketPercent}% tổng doanh thu`;
+        document.getElementById('rep-kpi-food-rev').textContent = foodRev.toLocaleString('vi-VN') + ' đ';
+        document.getElementById('rep-kpi-food-share').textContent = `Chiếm ${foodPercent}% tổng doanh thu`;
+        document.getElementById('rep-kpi-tickets-sold').textContent = (sum.totalTicketsSold || 0).toLocaleString('vi-VN') + ' vé';
+        document.getElementById('rep-kpi-orders-count').textContent = `${sum.totalOrders || 0} đơn đặt vé hoàn tất`;
+        document.getElementById('rep-kpi-occupancy').textContent = (sum.occupancyRate || 0) + '%';
+        document.getElementById('rep-kpi-avg-order').textContent = (sum.avgOrderValue || 0).toLocaleString('vi-VN') + ' đ';
+
+        // Cập nhật số lượng trên các badge tab phụ
+        document.getElementById('rep-badge-movies-count').textContent = data.byMovie ? data.byMovie.length : 0;
+        document.getElementById('rep-badge-cinemas-count').textContent = data.byCinema ? data.byCinema.length : 0;
+        document.getElementById('rep-badge-payments-count').textContent = data.byPayment ? data.byPayment.length : 0;
+        document.getElementById('rep-badge-details-count').textContent = data.details ? data.details.length : 0;
+
+        // Vẽ biểu đồ
+        renderReportCharts(data);
+
+        // Điền dữ liệu vào các bảng chi tiết
+        renderReportTables(data);
+    }
+
+    function destroyAllReportCharts() {
+        if (repChartTimeline) { repChartTimeline.destroy(); repChartTimeline = null; }
+        if (repChartMix) { repChartMix.destroy(); repChartMix = null; }
+        if (repChartMovies) { repChartMovies.destroy(); repChartMovies = null; }
+        if (repChartCinemas) { repChartCinemas.destroy(); repChartCinemas = null; }
+    }
+
+    function renderReportCharts(data) {
+        if (typeof Chart === 'undefined') {
+            console.warn('Chart.js chưa được tải, bỏ qua vẽ canvas');
+            return;
+        }
+
+        destroyAllReportCharts();
+
+        // 1. Biểu đồ Diễn biến thời gian (Bar & Line kết hợp)
+        const timelineCanvas = document.getElementById('rep-chart-timeline');
+        if (timelineCanvas && data.timeline && data.timeline.length > 0) {
+            const labels = data.timeline.map(t => t.date);
+            const ticketData = data.timeline.map(t => t.ticketRevenue);
+            const foodData = data.timeline.map(t => t.foodRevenue);
+            const totalData = data.timeline.map(t => t.totalRevenue);
+
+            repChartTimeline = new Chart(timelineCanvas, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            type: 'line',
+                            label: 'Tổng Doanh Thu',
+                            data: totalData,
+                            borderColor: '#16a34a',
+                            backgroundColor: 'rgba(22, 163, 74, 0.1)',
+                            borderWidth: 2.5,
+                            tension: 0.3,
+                            fill: false,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            order: 1
+                        },
+                        {
+                            type: 'bar',
+                            label: 'Doanh Thu Vé',
+                            data: ticketData,
+                            backgroundColor: '#e30613',
+                            borderRadius: 4,
+                            order: 2
+                        },
+                        {
+                            type: 'bar',
+                            label: 'Bắp Nước F&B',
+                            data: foodData,
+                            backgroundColor: '#f59e0b',
+                            borderRadius: 4,
+                            order: 3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + (context.raw || 0).toLocaleString('vi-VN') + ' đ';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(val) {
+                                    if (val >= 1000000) return (val / 1000000) + ' Tr';
+                                    if (val >= 1000) return (val / 1000) + ' k';
+                                    return val;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 2. Biểu đồ tròn Cơ cấu Doanh thu (Vé vs F&B)
+        const mixCanvas = document.getElementById('rep-chart-revenue-mix');
+        if (mixCanvas) {
+            const ticketRev = data.summary.totalTicketRevenue || 0;
+            const foodRev = data.summary.totalFoodRevenue || 0;
+
+            repChartMix = new Chart(mixCanvas, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Doanh Thu Vé', 'Doanh Thu F&B'],
+                    datasets: [{
+                        data: [ticketRev, foodRev],
+                        backgroundColor: ['#e30613', '#f59e0b'],
+                        borderWidth: 2,
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = ticketRev + foodRev;
+                                    const pct = total > 0 ? Math.round((context.raw / total) * 100) : 0;
+                                    return `${context.label}: ${(context.raw || 0).toLocaleString('vi-VN')} đ (${pct}%)`;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '60%'
+                }
+            });
+        }
+
+        // 3. Biểu đồ cột ngang Top Phim Doanh Thu Cao Nhất
+        const moviesCanvas = document.getElementById('rep-chart-movies');
+        if (moviesCanvas && data.byMovie && data.byMovie.length > 0) {
+            const topMovies = data.byMovie.slice(0, 7);
+            const labels = topMovies.map(m => m.movieTitle.length > 20 ? m.movieTitle.slice(0, 18) + '...' : m.movieTitle);
+            const revData = topMovies.map(m => m.totalRevenue);
+
+            repChartMovies = new Chart(moviesCanvas, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Doanh Thu (VNĐ)',
+                        data: revData,
+                        backgroundColor: '#dc2626',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Doanh thu: ' + (context.raw || 0).toLocaleString('vi-VN') + ' đ';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(val) {
+                                    if (val >= 1000000) return (val / 1000000) + ' Tr';
+                                    if (val >= 1000) return (val / 1000) + ' k';
+                                    return val;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 4. Biểu đồ cột Top Cụm Rạp Doanh Thu Cao Nhất
+        const cinemasCanvas = document.getElementById('rep-chart-cinemas');
+        if (cinemasCanvas && data.byCinema && data.byCinema.length > 0) {
+            const topCinemas = data.byCinema.slice(0, 7);
+            const labels = topCinemas.map(c => c.cinemaName.replace('CGV ', ''));
+            const revData = topCinemas.map(c => c.totalRevenue);
+
+            repChartCinemas = new Chart(cinemasCanvas, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Doanh Thu (VNĐ)',
+                        data: revData,
+                        backgroundColor: '#2563eb',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Doanh thu: ' + (context.raw || 0).toLocaleString('vi-VN') + ' đ';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(val) {
+                                    if (val >= 1000000) return (val / 1000000) + ' Tr';
+                                    if (val >= 1000) return (val / 1000) + ' k';
+                                    return val;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    function renderReportTables(data) {
+        // 1. Table Phim
+        const tbodyMovie = document.getElementById('rep-tbody-movie');
+        if (tbodyMovie) {
+            tbodyMovie.innerHTML = '';
+            if (data.byMovie && data.byMovie.length > 0) {
+                data.byMovie.forEach((m, idx) => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="font-weight: 700; color: #888;">#${idx + 1}</td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                ${m.posterUrl ? `<img src="${m.posterUrl}" style="width: 32px; height: 44px; object-fit: cover; border-radius: 4px;" onerror="this.style.display='none'" />` : ''}
+                                <div>
+                                    <strong style="color: #111;">${m.movieTitle}</strong>
+                                    ${m.genre ? `<div style="font-size: 0.72rem; color: #666;">${m.genre}</div>` : ''}
+                                </div>
+                            </div>
+                        </td>
+                        <td style="text-align: center;"><span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 700;">${m.ticketsSold} vé</span></td>
+                        <td style="text-align: right; font-weight: 600;">${m.ticketRevenue.toLocaleString('vi-VN')} đ</td>
+                        <td style="text-align: right; font-weight: 600; color: #d97706;">${m.foodRevenue.toLocaleString('vi-VN')} đ</td>
+                        <td style="text-align: right;"><strong style="color: #16a34a; font-size: 0.95rem;">${m.totalRevenue.toLocaleString('vi-VN')} đ</strong></td>
+                        <td style="text-align: right;">
+                            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 6px;">
+                                <div style="width: 50px; background: #e2e8f0; height: 6px; border-radius: 3px; overflow: hidden;">
+                                    <div style="width: ${m.percentage}%; background: #e30613; height: 100%;"></div>
+                                </div>
+                                <span style="font-weight: 700; font-size: 0.8rem; color: #333;">${m.percentage}%</span>
+                            </div>
+                        </td>
+                    `;
+                    tbodyMovie.appendChild(tr);
+                });
+            } else {
+                tbodyMovie.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 20px; color: #888;">Chưa có dữ liệu</td></tr>';
+            }
+        }
+
+        // 2. Table Cụm Rạp
+        const tbodyCinema = document.getElementById('rep-tbody-cinema');
+        if (tbodyCinema) {
+            tbodyCinema.innerHTML = '';
+            if (data.byCinema && data.byCinema.length > 0) {
+                data.byCinema.forEach((c, idx) => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="font-weight: 700; color: #888;">#${idx + 1}</td>
+                        <td><strong style="color: #111;">${c.cinemaName}</strong></td>
+                        <td><span class="badge" style="background: #f1f5f9; color: #475569;">${c.city || 'Toàn quốc'}</span></td>
+                        <td style="text-align: center;"><span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 700;">${c.ticketsSold} vé</span></td>
+                        <td style="text-align: right; font-weight: 600;">${c.ticketRevenue.toLocaleString('vi-VN')} đ</td>
+                        <td style="text-align: right; font-weight: 600; color: #d97706;">${c.foodRevenue.toLocaleString('vi-VN')} đ</td>
+                        <td style="text-align: right;"><strong style="color: #16a34a; font-size: 0.95rem;">${c.totalRevenue.toLocaleString('vi-VN')} đ</strong></td>
+                        <td style="text-align: right;">
+                            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 6px;">
+                                <div style="width: 50px; background: #e2e8f0; height: 6px; border-radius: 3px; overflow: hidden;">
+                                    <div style="width: ${c.percentage}%; background: #2563eb; height: 100%;"></div>
+                                </div>
+                                <span style="font-weight: 700; font-size: 0.8rem; color: #333;">${c.percentage}%</span>
+                            </div>
+                        </td>
+                    `;
+                    tbodyCinema.appendChild(tr);
+                });
+            } else {
+                tbodyCinema.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 20px; color: #888;">Chưa có dữ liệu</td></tr>';
+            }
+        }
+
+        // 3. Table Kênh Thanh Toán
+        const tbodyPayment = document.getElementById('rep-tbody-payment');
+        if (tbodyPayment) {
+            tbodyPayment.innerHTML = '';
+            if (data.byPayment && data.byPayment.length > 0) {
+                data.byPayment.forEach((p, idx) => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="font-weight: 700; color: #888;">#${idx + 1}</td>
+                        <td><span class="badge" style="background: #fdf2f8; color: #be185d; border: 1px solid #fbcfe8; font-weight: 700; font-size: 0.82rem; padding: 4px 10px;">💳 ${p.method}</span></td>
+                        <td style="text-align: center;"><strong style="color: #333;">${p.ordersCount} đơn</strong></td>
+                        <td style="text-align: right;"><strong style="color: #16a34a; font-size: 0.95rem;">${p.totalRevenue.toLocaleString('vi-VN')} đ</strong></td>
+                        <td style="text-align: right;">
+                            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 6px;">
+                                <div style="width: 60px; background: #e2e8f0; height: 6px; border-radius: 3px; overflow: hidden;">
+                                    <div style="width: ${p.percentage}%; background: #be185d; height: 100%;"></div>
+                                </div>
+                                <span style="font-weight: 700; font-size: 0.8rem; color: #333;">${p.percentage}%</span>
+                            </div>
+                        </td>
+                    `;
+                    tbodyPayment.appendChild(tr);
+                });
+            } else {
+                tbodyPayment.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px; color: #888;">Chưa có dữ liệu</td></tr>';
+            }
+        }
+
+        // 4. Table Chi Tiết Đơn Đặt Vé
+        const tbodyDetails = document.getElementById('rep-tbody-details');
+        if (tbodyDetails) {
+            tbodyDetails.innerHTML = '';
+            if (data.details && data.details.length > 0) {
+                data.details.forEach(d => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>
+                            <strong style="color: #e30613; font-family: monospace;">${d.bookingCode}</strong>
+                            <div style="font-size: 0.72rem; color: #666;">${d.bookingDate}</div>
+                        </td>
+                        <td>
+                            <strong>${d.customerName}</strong>
+                            <div style="font-size: 0.72rem; color: #666;">${d.customerPhone}</div>
+                        </td>
+                        <td>
+                            <strong style="color: #111;">${d.movieTitle}</strong>
+                            <div style="font-size: 0.72rem; color: #666;">${d.cinemaName} · ${d.hallName}</div>
+                        </td>
+                        <td>
+                            <span class="badge" style="background: #f1f5f9; color: #0f172a; font-weight: 700;">${d.seatsList}</span>
+                            <div style="font-size: 0.7rem; color: #64748b; margin-top: 2px;">(${d.ticketsCount} vé)</div>
+                        </td>
+                        <td><small style="color: #64748b;">${d.foodDesc || '—'}</small></td>
+                        <td style="text-align: right; font-weight: 600;">${d.ticketAmount.toLocaleString('vi-VN')} đ</td>
+                        <td style="text-align: right; font-weight: 600; color: #d97706;">${d.foodAmount.toLocaleString('vi-VN')} đ</td>
+                        <td style="text-align: right;"><strong style="color: #16a34a; font-size: 0.9rem;">${d.totalAmount.toLocaleString('vi-VN')} đ</strong></td>
+                        <td><span class="badge" style="background: #eef2ff; color: #4338ca;">${d.paymentMethod}</span></td>
+                    `;
+                    tbodyDetails.appendChild(tr);
+                });
+            } else {
+                tbodyDetails.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 20px; color: #888;">Chưa có dữ liệu</td></tr>';
+            }
+        }
+    }
+
+    // Khởi tạo ngày mặc định cho Báo cáo khi trang sẵn sàng
+    document.addEventListener('DOMContentLoaded', function() {
+        const today = new Date();
+        const formatDateStr = (d) => {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        const fromInput = document.getElementById('rep-from-date');
+        const toInput = document.getElementById('rep-to-date');
+        if (fromInput && toInput && !fromInput.value && !toInput.value) {
+            toInput.value = formatDateStr(today);
+            const d30 = new Date();
+            d30.setDate(today.getDate() - 29);
+            fromInput.value = formatDateStr(d30);
+        }
+
+        @if (activeTab == "reports")
+        {
+            <text>
+            setTimeout(loadRevenueReport, 250);
+            </text>
+        }
+    });
 </script>
 }

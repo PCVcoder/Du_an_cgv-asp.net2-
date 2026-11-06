@@ -35,6 +35,9 @@ namespace Du_an_CGV.Models
         [Display(Name = "Đang chạy / Hiển thị")]
         public bool IsActive { get; set; } = true;
 
+        [Display(Name = "Đã ẩn")]
+        public bool IsDeleted { get; set; } = false;
+
         [Display(Name = "Ngày tạo")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

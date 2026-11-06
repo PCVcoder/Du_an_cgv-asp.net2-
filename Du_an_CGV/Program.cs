@@ -5,6 +5,18 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Tối ưu Kestrel và IIS để tránh lỗi HTTP 400 (Request Headers Too Long / Cookie Size Exceeded) trên localhost
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    serverOptions.Limits.MaxRequestLineSize = 32 * 1024; // 32 KB (URL + Query string)
+    serverOptions.Limits.MaxRequestHeadersTotalSize = 128 * 1024; // 128 KB (Total Headers + Cookies)
+});
+
+builder.Services.Configure<IISServerOptions>(options =>
+{
+    options.MaxRequestBodySize = int.MaxValue;
+});
+
 // Add services to the container.
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
@@ -36,6 +48,8 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.LogoutPath = "/Account/Logout";
     options.ExpireTimeSpan = TimeSpan.FromHours(4);
     options.SlidingExpiration = true;
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Lax;
 });
 
 builder.Services.AddControllersWithViews();

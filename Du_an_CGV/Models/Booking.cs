@@ -48,6 +48,9 @@ namespace Du_an_CGV.Models
         [Display(Name = "Hình thức thanh toán")]
         public string PaymentMethod { get; set; } = "VNPAY-QR"; // VNPAY-QR, ZaloPay, MoMo, Thẻ ATM/Visa
 
+        [Display(Name = "Đã ẩn")]
+        public bool IsDeleted { get; set; } = false;
+
         // Danh sách chi tiết bắp nước đã đặt kèm vé
         public ICollection<BookingFoodItem> BookingFoodItems { get; set; } = new List<BookingFoodItem>();
     }

@@ -120,30 +120,44 @@
                 <input class="input-control" name="CompanyName" placeholder="Tên công ty hoặc trường học">
 
                 <label style="font-weight: 700; font-size: 0.85rem;">Gói dịch vụ</label>
-                <select class="input-control" name="ServiceType">
+                <select class="input-control" name="ServiceType" id="rentalServiceType">
                     <option value="Thuê trọn rạp tổ chức sự kiện">Hall Rental (Thuê phòng tổ chức hội thảo / sự kiện)</option>
                     <option value="Đặt vé xem phim theo nhóm">Group Booking (Xem phim theo nhóm đoàn thể)</option>
                     <option value="Phòng chiếu L'Amour trọn gói">Private Show L'Amour (Phòng chiếu giường nằm cao cấp)</option>
                 </select>
                 
                 <label style="font-weight: 700; font-size: 0.85rem;">Cụm rạp mong muốn <span style="color: #e30613;">*</span></label>
-                <select class="input-control" name="CinemaId" required>
-                    <option value="">-- Chọn cụm rạp CGV bạn muốn thuê --</option>
-                    @if (ViewBag.Cinemas != null)
-                    {
-                        foreach (var c in (IEnumerable<Du_an_CGV.Models.Cinema>)ViewBag.Cinemas)
+                <div>
+                    <select class="input-control" name="CinemaId" id="rentalCinemaSelect" required>
+                        <option value="">-- Chọn cụm rạp CGV bạn muốn thuê --</option>
+                        @if (ViewBag.Cinemas != null)
                         {
-                            <option value="@c.Id">@c.Name (@c.City)</option>
+                            foreach (var c in (IEnumerable<Du_an_CGV.Models.Cinema>)ViewBag.Cinemas)
+                            {
+                                var maxHall = c.CinemaHalls != null && c.CinemaHalls.Any() ? c.CinemaHalls.Max(h => h.TotalSeats) : 96;
+                                var totalSeats = c.CinemaHalls != null && c.CinemaHalls.Any() ? c.CinemaHalls.Sum(h => h.TotalSeats) : 300;
+                                var hallsCount = c.CinemaHalls != null ? c.CinemaHalls.Count : 0;
+                                <option value="@c.Id" data-maxhall="@maxHall" data-total="@totalSeats" data-hallscount="@hallsCount" data-city="@c.City">
+                                    @c.Name (@c.City) — Phòng lớn nhất: @maxHall ghế (Tổng: @totalSeats ghế)
+                                </option>
+                            }
                         }
-                    }
-                </select>
+                    </select>
+                    <small style="color: #666; font-size: 0.78rem; display: block; margin-top: 4px;">💡 Sức chứa phòng lớn nhất và tổng số ghế được hiển thị theo dữ liệu thực của rạp.</small>
+                </div>
 
+                <label style="font-weight: 700; font-size: 0.85rem;">Ngày dự kiến tổ chức <span style="color: #e30613;">*</span></label>
+                <input type="date" class="input-control" name="ExpectedDate" min="@DateTime.Today.ToString("yyyy-MM-dd")" value="@DateTime.Today.AddDays(7).ToString("yyyy-MM-dd")" required>
 
-                <label style="font-weight: 700; font-size: 0.85rem;">Số lượng khách dự kiến</label>
-                <input type="number" class="input-control" name="GuestCount" value="50" min="10">
+                <label style="font-weight: 700; font-size: 0.85rem;">Số lượng khách dự kiến <span style="color: #e30613;">*</span></label>
+                <div>
+                    <input type="number" class="input-control" id="rentalGuestCount" name="GuestCount" value="50" min="10" max="2500" required>
+                    <!-- Khung cảnh báo và tư vấn sức chứa thông minh -->
+                    <div id="capacityAdvisorBox" style="margin-top: 10px; display: none; padding: 12px 14px; border-radius: 6px; font-size: 0.84rem; line-height: 1.5;"></div>
+                </div>
 
-                <label style="font-weight: 700; font-size: 0.85rem;">Yêu cầu chi tiết</label>
-                <textarea class="input-control" name="Notes" rows="2" placeholder="Thời gian mong muốn, yêu cầu bắp nước..."></textarea>
+                <label style="font-weight: 700; font-size: 0.85rem;">Yêu cầu chi tiết & Ghi chú</label>
+                <textarea class="input-control" name="Notes" rows="3" placeholder="Thời gian mong muốn (sáng/chiều/tối), yêu cầu bắp nước combo, màn hình trình chiếu, micro..."></textarea>
                 
                 <div></div>
                 <div>
@@ -153,3 +167,68 @@
         </form>
     </section>
 </main>
+
+@section Scripts {
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const cinemaSelect = document.getElementById("rentalCinemaSelect");
+        const guestInput = document.getElementById("rentalGuestCount");
+        const advisorBox = document.getElementById("capacityAdvisorBox");
+
+        function checkCapacity() {
+            if (!cinemaSelect || !guestInput || !advisorBox) return;
+
+            const selectedOpt = cinemaSelect.options[cinemaSelect.selectedIndex];
+            if (!selectedOpt || !selectedOpt.value) {
+                advisorBox.style.display = "none";
+                return;
+            }
+
+            const maxHall = parseInt(selectedOpt.getAttribute("data-maxhall")) || 0;
+            const totalSeats = parseInt(selectedOpt.getAttribute("data-total")) || 0;
+            const hallsCount = parseInt(selectedOpt.getAttribute("data-hallscount")) || 0;
+            const guests = parseInt(guestInput.value) || 0;
+
+            if (guests <= 0 || maxHall <= 0) {
+                advisorBox.style.display = "none";
+                return;
+            }
+
+            advisorBox.style.display = "block";
+
+            if (guests <= maxHall) {
+                advisorBox.style.background = "#e8f5e9";
+                advisorBox.style.border = "1px solid #a5d6a7";
+                advisorBox.style.color = "#1b5e20";
+                advisorBox.innerHTML = `
+                    <div style="font-weight: 700; margin-bottom: 2px;">✅ Sức chứa phòng hoàn toàn phù hợp!</div>
+                    <div>Phòng chiếu lớn nhất tại rạp này có <strong>${maxHall} ghế</strong>, đáp ứng trọn vẹn đoàn <strong>${guests} khách</strong> trong cùng 1 phòng chiếu.</div>
+                `;
+            } else if (guests <= totalSeats) {
+                const roomsNeeded = Math.ceil(guests / maxHall);
+                advisorBox.style.background = "#fff8e1";
+                advisorBox.style.border = "1px solid #ffe082";
+                advisorBox.style.color = "#8d6e00";
+                advisorBox.innerHTML = `
+                    <div style="font-weight: 700; margin-bottom: 2px;">⚠️ Lưu ý sức chứa: Số khách (${guests}) vượt quá sức chứa phòng lớn nhất (${maxHall} ghế)!</div>
+                    <div>💡 <strong>Phương án đề xuất của CGV:</strong> Rạp có tổng cộng <strong>${totalSeats} ghế (${hallsCount} phòng)</strong>. CGV sẽ hỗ trợ sắp xếp <strong>${roomsNeeded} phòng chiếu song song</strong> cùng khung giờ cho đoàn của bạn, hoặc tư vấn chuyển sang cụm rạp quy mô lớn hơn gần đó. Bạn vẫn có thể gửi yêu cầu để nhận tư vấn chi tiết!</div>
+                `;
+            } else {
+                advisorBox.style.background = "#ffebee";
+                advisorBox.style.border = "1px solid #ffcdd2";
+                advisorBox.style.color = "#b71c1c";
+                advisorBox.innerHTML = `
+                    <div style="font-weight: 700; margin-bottom: 2px;">⚠️ Vượt quá tổng sức chứa toàn cụm rạp (${totalSeats} ghế / ${hallsCount} phòng)!</div>
+                    <div>Số lượng <strong>${guests} khách</strong> lớn hơn tổng số ghế hiện có của toàn bộ cụm rạp này. CGV đề xuất phương án chia thành nhiều ca chiếu trong ngày hoặc chuyển sang các cụm rạp trung tâm quy mô siêu lớn (như CGV Landmark 81, CGV Sư Vạn Hạnh, CGV Vincom Bà Triệu...). Chuyên viên CGV sẽ liên hệ tư vấn phương án trọn gói tốt nhất!</div>
+                `;
+            }
+        }
+
+        if (cinemaSelect) cinemaSelect.addEventListener("change", checkCapacity);
+        if (guestInput) guestInput.addEventListener("input", checkCapacity);
+
+        // Run on initial load
+        checkCapacity();
+    });
+</script>
+}

@@ -52,7 +52,18 @@ namespace Du_an_CGV.Controllers
         [HttpGet]
         public IActionResult Login(string? returnUrl = null)
         {
-            return RedirectToAction("Register", new { tab = "login", returnUrl });
+            if (User.Identity != null && User.Identity.IsAuthenticated)
+            {
+                if (User.IsInRole("Admin"))
+                {
+                    return RedirectToAction("Index", "Admin");
+                }
+                return RedirectToAction("Profile");
+            }
+
+            ViewBag.ActiveTab = "login";
+            ViewBag.ReturnUrl = returnUrl;
+            return View("Register");
         }
 
         // POST: /Account/Login

@@ -21,6 +21,7 @@ namespace Du_an_CGV.Data
                 await EnsureAllMoviesHaveShowtimesAsync(context);
                 await EnsureAdminActionLogsAndSampleBookingsAsync(context);
                 await EnsureMemberTiersAndSeatHoldsTableAsync(context, userManager);
+                await EnsureSoftDeleteAndDetailedRentalColumnsAsync(context);
                 return;
             }
 
@@ -657,6 +658,7 @@ namespace Du_an_CGV.Data
             await EnsureFoodItemsTableAndSeedAsync(context);
             await EnsureAdminActionLogsAndSampleBookingsAsync(context);
             await EnsureMemberTiersAndSeatHoldsTableAsync(context, null);
+            await EnsureSoftDeleteAndDetailedRentalColumnsAsync(context);
         }
 
         public static async Task EnsureFoodItemsTableAndSeedAsync(ApplicationDbContext context)
@@ -996,6 +998,9 @@ namespace Du_an_CGV.Data
                 var existingShowtimes = await context.Showtimes
                     .Where(s => s.StartTime >= startDate && s.StartTime < endDate)
                     .ToListAsync();
+
+                // Nếu đã có sẵn lịch chiếu cho 3 ngày tới, không cần tính toán và lặp lại hàng nghìn lượt
+                if (existingShowtimes.Count >= 30) return;
 
                 var newShowtimes = new List<Showtime>();
 
@@ -1515,6 +1520,73 @@ namespace Du_an_CGV.Data
             catch
             {
                 // Ignore seed error
+            }
+        }
+
+        private static async Task EnsureSoftDeleteAndDetailedRentalColumnsAsync(ApplicationDbContext context)
+        {
+            try
+            {
+                await context.Database.ExecuteSqlRawAsync(@"
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'HallRentalRequests' AND COLUMN_NAME = 'AdminNotes')
+                    BEGIN
+                        ALTER TABLE [HallRentalRequests] ADD [AdminNotes] nvarchar(max) NULL;
+                    END
+
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'HallRentalRequests' AND COLUMN_NAME = 'EstimatedBudget')
+                    BEGIN
+                        ALTER TABLE [HallRentalRequests] ADD [EstimatedBudget] decimal(18,2) NULL;
+                    END
+
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'HallRentalRequests' AND COLUMN_NAME = 'IsDeleted')
+                    BEGIN
+                        ALTER TABLE [HallRentalRequests] ADD [IsDeleted] bit NOT NULL DEFAULT 0;
+                    END
+
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'ContactInquiries' AND COLUMN_NAME = 'IsDeleted')
+                    BEGIN
+                        ALTER TABLE [ContactInquiries] ADD [IsDeleted] bit NOT NULL DEFAULT 0;
+                    END
+
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Movies' AND COLUMN_NAME = 'IsDeleted')
+                    BEGIN
+                        ALTER TABLE [Movies] ADD [IsDeleted] bit NOT NULL DEFAULT 0;
+                    END
+
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Cinemas' AND COLUMN_NAME = 'IsDeleted')
+                    BEGIN
+                        ALTER TABLE [Cinemas] ADD [IsDeleted] bit NOT NULL DEFAULT 0;
+                    END
+
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'CinemaHalls' AND COLUMN_NAME = 'IsDeleted')
+                    BEGIN
+                        ALTER TABLE [CinemaHalls] ADD [IsDeleted] bit NOT NULL DEFAULT 0;
+                    END
+
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Showtimes' AND COLUMN_NAME = 'IsDeleted')
+                    BEGIN
+                        ALTER TABLE [Showtimes] ADD [IsDeleted] bit NOT NULL DEFAULT 0;
+                    END
+
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'FoodItems' AND COLUMN_NAME = 'IsDeleted')
+                    BEGIN
+                        ALTER TABLE [FoodItems] ADD [IsDeleted] bit NOT NULL DEFAULT 0;
+                    END
+
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Bookings' AND COLUMN_NAME = 'IsDeleted')
+                    BEGIN
+                        ALTER TABLE [Bookings] ADD [IsDeleted] bit NOT NULL DEFAULT 0;
+                    END
+
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'NewsOffers' AND COLUMN_NAME = 'IsDeleted')
+                    BEGIN
+                        ALTER TABLE [NewsOffers] ADD [IsDeleted] bit NOT NULL DEFAULT 0;
+                    END
+                ");
+            }
+            catch
+            {
+                // Ignore if running on another provider or columns already exist
             }
         }
     }

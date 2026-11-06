@@ -32,5 +32,7 @@ namespace Du_an_CGV.Models.ViewModels
         public List<string> Provinces { get; set; } = new();
         public List<MemberTier> MemberTiers { get; set; } = new();
         public List<SeatHold> ActiveSeatHolds { get; set; } = new();
+        public HashSet<int> ConflictShowtimeIds { get; set; } = new();
+        public Dictionary<int, string> ConflictDetails { get; set; } = new();
     }
 }

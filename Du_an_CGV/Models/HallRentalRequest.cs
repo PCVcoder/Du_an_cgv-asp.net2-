@@ -51,7 +51,16 @@ namespace Du_an_CGV.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         [Display(Name = "Trạng thái")]
-        public string Status { get; set; } = "Mới tiếp nhận"; // Mới tiếp nhận, Đã liên hệ, Đã chốt, Đã hủy
+        public string Status { get; set; } = "Mới tiếp nhận"; // Mới tiếp nhận, Đang tư vấn, Chờ khảo sát, Đã chốt, Đã hủy (Ẩn)
+
+        [Display(Name = "Ghi chú QTV / Tiến độ xử lý")]
+        public string? AdminNotes { get; set; }
+
+        [Display(Name = "Dự toán / Báo giá sơ bộ (VNĐ)")]
+        public decimal? EstimatedBudget { get; set; }
+
+        [Display(Name = "Đã ẩn")]
+        public bool IsDeleted { get; set; } = false;
     }
 }
 

@@ -38,6 +38,9 @@ namespace Du_an_CGV.Models
         [Display(Name = "Tài khoản người gửi (nếu có)")]
         public string? UserId { get; set; }
         public ApplicationUser? User { get; set; }
+
+        [Display(Name = "Đã ẩn")]
+        public bool IsDeleted { get; set; } = false;
     }
 }
 

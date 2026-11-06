@@ -71,6 +71,9 @@ namespace Du_an_CGV.Models
         [Display(Name = "Nhãn đặc biệt")]
         public string? SpecialTag { get; set; }
 
+        [Display(Name = "Đã ẩn")]
+        public bool IsDeleted { get; set; } = false;
+
         public ICollection<Showtime> Showtimes { get; set; } = new List<Showtime>();
         public ICollection<NewsOffer> NewsOffers { get; set; } = new List<NewsOffer>();
     }
